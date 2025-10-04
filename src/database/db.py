@@ -134,6 +134,121 @@ def row_exists(date, label=None, coordinates=None):
     conn.close()
     return exists
 
+
+# FUNKCJE DLA ALERTÓW UŻYTKOWNIKA
+
+def add_user_alert(email: str, lat: float, lng: float, label: str = "Alert użytkownika"):
+    """Dodaje alert użytkownika do bazy danych."""
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    coordinates = json.dumps([lat, lng])
+
+    try:
+        # Najpierw upewnij się, że użytkownik istnieje
+        cursor.execute("INSERT OR IGNORE INTO User (email) VALUES (?)", (email,))
+
+        # Dodaj alert do scrapped_data z powiązaniem z użytkownikiem
+        cursor.execute("""
+                       INSERT INTO scrapped_data (date, label, address, city, coordinates, trust, user_email)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)
+                       """, (date, label, "", "", coordinates, 100, email))
+
+        conn.commit()
+        print(f"Alert użytkownika {email} dodany pomyślnie.")
+        return True
+    except Exception as e:
+        print(f"Błąd podczas dodawania alertu: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def get_user_alerts(email: str):
+    """Pobiera wszystkie alerty danego użytkownika."""
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+                   SELECT *
+                   FROM scrapped_data
+                   WHERE user_email = ?
+                   ORDER BY date DESC
+                   """, (email,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    result = []
+    for row in rows:
+        row_dict = {
+            "id": row[0],
+            "date": row[1],
+            "label": row[2],
+            "address": row[3],
+            "city": row[4],
+            "coordinates": json.loads(row[5]) if row[5] else None,
+            "trust": row[6],
+            "user_email": row[7] if len(row) > 7 else None
+        }
+        result.append(row_dict)
+    return result
+
+
+def get_all_alerts():
+    """Pobiera wszystkie alerty wszystkich użytkowników."""
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM Coordinate WHERE email IS NOT NULL ORDER BY date DESC")
+    rows = cursor.fetchall()
+    conn.close()
+
+    result = []
+    for row in rows:
+        row_dict = {
+            "id": row[0],
+            "date": row[1],
+            "label": row[2],
+            "address": row[3],
+            "city": row[4],
+            "coordinates": json.loads(row[5]) if row[5] else None,
+            "trust": row[6],
+            "user_email": row[7] if len(row) > 7 else None
+        }
+        result.append(row_dict)
+    return result
+
+
+# FUNKCJE DLA UŻYTKOWNIKÓW
+
+def add_user(email: str):
+    """Dodaje nowego użytkownika do tabeli User."""
+    conn = connect_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("INSERT OR IGNORE INTO User (email) VALUES (?)", (email,))
+        conn.commit()
+        print(f"Użytkownik {email} dodany pomyślnie.")
+        return True
+    except sqlite3.IntegrityError:
+        print(f"Użytkownik z emailem {email} już istnieje.")
+        return False
+    finally:
+        conn.close()
+
+
+def get_user_by_email(email: str):
+    """Pobiera użytkownika po emailu."""
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM User WHERE email = ?", (email,))
+    user = cursor.fetchone()
+    conn.close()
+    return dict(user) if user else None
+
+
 if __name__ == '__main__':
     conn = connect_db()
 

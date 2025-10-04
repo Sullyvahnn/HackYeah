@@ -5,9 +5,8 @@ import time
 import smtplib
 from email.message import EmailMessage
 from flask import Flask, render_template, render_template_string, request, redirect, url_for, session, flash, jsonify
-
+from src.database.db import add_user_alert, get_user_alerts, get_all_alerts
 from src.database.db import LoginForm, connect_db
-from src.heatmap_algo import create_heatmap
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret')
 
@@ -126,13 +125,46 @@ reports_data = []  # Tymczasowe przechowywanie alertów
 
 
 @app.route('/api/reports', methods=['GET', 'POST'])
-def reports():
-    if request.method == 'POST':
+def handle_reports():
+    if request.method == 'GET':
+        alerts = get_all_alerts()
+        return jsonify(alerts)
+
+    elif request.method == 'POST':
+        if not session.get('user_email'):
+            return jsonify({"status": "error", "message": "Nie jesteś zalogowany/a"}), 401
+
         data = request.get_json()
-        print("Nowy alert:", data)
-        reports_data.append(data)
-        return {"status": "ok"}
-    return reports_data
+        if not data:
+            return jsonify({"status": "error", "message": "Brak danych"}), 400
+
+        user_email = session['user_email']
+
+        try:
+            success = add_user_alert(
+                email=user_email,
+                lat=data['lat'],
+                lng=data['lng'],
+                label="Alert użytkownika"
+            )
+
+            if success:
+                return jsonify({"status": "success", "message": "Alert dodany pomyślnie."})
+            else:
+                return jsonify({"status": "error", "message": "Błąd podczas dodawania alertu"}), 500
+
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/my-alerts')
+def get_my_alerts():
+    if not session.get('user_email'):
+        return jsonify([])
+
+    user_email = session['user_email']
+    alerts = get_user_alerts(user_email)
+    return jsonify(alerts)
 
 
 
