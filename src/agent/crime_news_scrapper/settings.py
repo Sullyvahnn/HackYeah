@@ -10,7 +10,7 @@ ITEM_PIPELINES = {
     'agent.crime_news_scrapper.pipelines.RawArticlePipeline': 300, 
 }
 
-ROBOTSTXT_OBEY = True
+ROBOTSTXT_OBEY = False
 CONCURRENT_REQUESTS = 4
 DOWNLOAD_DELAY = 2
 COOKIES_ENABLED = False
