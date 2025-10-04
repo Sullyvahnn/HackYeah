@@ -151,7 +151,7 @@ def main():
     
     scraper = BatchScraper(
         duration_minutes=20,   # 20 minut działania
-        batch_items=5,         # 5 artykułów na batch
+        batch_items=7,         # 7 artykułów na batch
         pause_seconds=65       # 65s pauzy (bezpieczne)
     )
     
