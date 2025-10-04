@@ -5,53 +5,84 @@ import logging
 from datetime import date, datetime, timedelta
 from urllib.parse import urlparse, urljoin
 
-from agent.crime_news_scrapper.ai_filter_gemini import CrimeFilterLocal
+from agent.crime_news_scrapper.ai_filter_ollama import CrimeFilterLocal
 from agent.db import initialize_db_manager
 
 logger = logging.getLogger(__name__)
 
 
-class KrakowCrimeSpider(scrapy.Spider):
-    """Spider analizujący wiadomości z Krakowa - używa Gemini AI"""
-    name = 'krakow_crime'
+class MalopolskaCrimeSpider(scrapy.Spider):
+    """Spider analizujący wiadomości z CAŁEJ Małopolski - używa Ollama AI"""
+    name = 'malopolska_crime'
 
+    # ✅ WSZYSTKIE miasta Małopolski + ogólne źródła
     start_urls = [
+        # === KRAKÓW ===
         'https://tvn24.pl/krakow',
         'https://krakow.naszemiasto.pl/',
         'https://www.fakt.pl/wydarzenia/polska/krakow',
+        
+        # === TARNÓW ===
+        'https://tarnow.naszemiasto.pl/',
+        'https://www.fakt.pl/wydarzenia/polska/tarnow',
+        
+        # === NOWY SĄCZ ===
+        'https://nowysacz.naszemiasto.pl/',
+        
+        # === OŚWIĘCIM ===
+        'https://oswiecim.naszemiasto.pl/',
+        
+        # === CHRZANÓW ===
+        'https://chrzanow.naszemiasto.pl/',
+        
+        # === WIELICZKA ===
+        'https://wieliczka.naszemiasto.pl/',
+        
+        # === ZAKOPANE ===
+        'https://zakopane.naszemiasto.pl/',
+        
+        # === POLICJA - wszystkie tagi przestępstw ===
         'https://malopolska.policja.gov.pl/krk/tagi/1220,zabojstwo.html',
         'https://malopolska.policja.gov.pl/krk/tagi/1221,wypadek.html',
         'https://malopolska.policja.gov.pl/krk/tagi/1222,pozar.html',
         'https://malopolska.policja.gov.pl/krk/tagi/1223,kradziez.html',
+        'https://malopolska.policja.gov.pl/krk/tagi/1224,napad.html',
+        'https://malopolska.policja.gov.pl/krk/aktualnosci',
+        
+        # === OGÓLNE (filtrowane przez AI) ===
+        'https://tvn24.pl/najnowsze',
+        'https://www.fakt.pl/wydarzenia/polska/malopolska',
     ]
 
     custom_settings = {
-        'USER_AGENT': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'USER_AGENT': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'ROBOTSTXT_OBEY': False,
         'DOWNLOAD_DELAY': 2.0,
         'CONCURRENT_REQUESTS': 2,
         'COOKIES_ENABLED': False,
         'LOG_LEVEL': 'INFO',
-        'CLOSESPIDER_PAGECOUNT': 15,
-        'CLOSESPIDER_ITEMCOUNT': 20,
+        'CLOSESPIDER_PAGECOUNT': 100,
+        'CLOSESPIDER_ITEMCOUNT': 150,
+        'RETRY_TIMES': 2,
+        'DOWNLOAD_TIMEOUT': 30,
     }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.location = "krakow"
+        self.location = "malopolska"
         self.output_dir = f"data/{self.location}"
         os.makedirs(self.output_dir, exist_ok=True)
 
         self.output_file = os.path.join(self.output_dir, f"events_{date.today()}.jsonl")
-        self.logger.info(f"Zapis do: {self.output_file}")
+        self.logger.info(f"📁 Zapis do: {self.output_file}")
 
-        # Model AI (Gemini)
+        # Model AI (Ollama - lokalny!)
         self.ai_filter = CrimeFilterLocal()
         self.db = initialize_db_manager("data/crime_data.db")
 
         self.processed_urls = self._load_processed_urls()
-        self.logger.info(f"📦 Wczytano {len(self.processed_urls)} przetworzonych URL")
+        self.logger.info(f"📦 Wczytano {len(self.processed_urls)} przetworzonych URL (ostatnie 7 dni)")
 
         self.stats = {
             "visited_pages": 0,
@@ -59,12 +90,13 @@ class KrakowCrimeSpider(scrapy.Spider):
             "passed_ai_filter": 0,
             "saved_to_db": 0,
             "duplicates_skipped": 0,
+            "errors": 0,
         }
         
         self.scrape_start = datetime.now()
 
     def _load_processed_urls(self):
-        """Wczytuje TYLKO URL z ostatnich 7 dni"""
+        """Wczytuje TYLKO URL z ostatnich 7 dni (nie przetwarza starych)"""
         processed = set()
         conn = self.db.get_connection()
         
