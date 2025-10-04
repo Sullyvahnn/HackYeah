@@ -1,4 +1,5 @@
 # db.py
+import os
 import sqlite3
 import json
 from datetime import datetime
@@ -7,7 +8,8 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired, Email
 
-DB_NAME = "data.db"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "data.db")
 
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
@@ -15,7 +17,7 @@ class LoginForm(FlaskForm):
 
 def connect_db():
     """Connects to the SQLite database and creates the table if it doesn’t exist."""
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
