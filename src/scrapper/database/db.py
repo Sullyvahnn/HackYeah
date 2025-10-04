@@ -88,7 +88,7 @@ def view_all():
 
 def row_exists(date, label=None, coordinates=None):
     """Check if a row with the same date, label, and coordinates already exists."""
-    conn = sqlite3.connect(DB_NAME)
+    conn = connect_db()
     cursor = conn.cursor()
 
     x, y = (coordinates if coordinates else (None, None))
@@ -105,4 +105,5 @@ def row_exists(date, label=None, coordinates=None):
     exists = cursor.fetchone() is not None
     conn.close()
     return exists
+
 
