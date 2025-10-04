@@ -22,9 +22,9 @@
 
     // --- ALERT MODE - CZĘŚĆ 1: WYBÓR LOKALIZACJI ---
     function enableAlertMode() {
-      alert('{{user_email}}')
+      // alert('{{user_email}}')
         if (!'{{user_email}}') {
-            alert("Musisz być zalogowany, aby dodać alert.");
+            // alert("Musisz być zalogowany, aby dodać alert.");
             return;
         }
 
@@ -42,7 +42,7 @@
         }
 
         toggleMenu();
-        alert("Kliknij na mapie, aby wybrać lokalizację alertu.");
+        // alert("Kliknij na mapie, aby wybrać lokalizację alertu.");
     }
 
     // --- OBSŁUGA KLIKNIĘCIA NA MAPIE - CZĘŚĆ 1: ZAZNACZANIE ---
@@ -77,37 +77,12 @@
         alertMode = false;
 
         // Pokaż potwierdzenie i opcje dalszego działania
-        showAlertConfirmation(latlng);
+        sendAlertToBackend(latlng);
     });
-
-    // --- CZĘŚĆ 2: POTWIERDZENIE I WYSYŁANIE ---
-    function showAlertConfirmation(latlng) {
-        var confirmation = confirm(
-            "Wybrano lokalizację:\n" +
-            "Szerokość: " + latlng.lat.toFixed(6) + "\n" +
-            "Długość: " + latlng.lng.toFixed(6) + "\n\n" +
-            "Czy chcesz wysłać alert dla tej lokalizacji?"
-        );
-
-        if (confirmation) {
-            sendAlertToBackend(latlng);
-        } else {
-            // Użytkownik anulował - usuń tymczasowe elementy
-            if (tempMarker) {
-                map.removeLayer(tempMarker);
-                tempMarker = null;
-            }
-            if (tempCircle) {
-                map.removeLayer(tempCircle);
-                tempCircle = null;
-            }
-            selectedLocation = null;
-            alert("Anulowano dodawanie alertu.");
-        }
-    }
 
     // --- WYSYŁANIE DO BACKENDU - CZĘŚĆ 2: FINALIZACJA ---
     function sendAlertToBackend(latlng) {
+        alert(latlng)
         // Zamień tymczasowe elementy na stałe
         if (tempMarker) {
             // Możesz zmienić styl markera na stały
@@ -146,15 +121,15 @@
         })
         .then(response => response.json())
         .then(data => {
-            if (data.status === "ok") {
-                alert("Alert został pomyślnie dodany!");
-            } else {
-                alert("Błąd podczas dodawania alertu: " + data.message);
-            }
+            // if (data.status === "ok") {
+            //     // alert("Alert został pomyślnie dodany!");
+            // } else {
+            //     alert("Błąd podczas dodawania alertu: " + data.message);
+            // }
         })
         .catch(error => {
             console.error("Error:", error);
-            alert("Błąd połączenia z serwerem.");
+            // alert("Błąd połączenia z serwerem.");
         });
 
         selectedLocation = null;
@@ -169,10 +144,10 @@
 
     // Funkcja do wyświetlenia szczegółów lokalizacji w menu
     function showLocationDetails() {
-        if (!selectedLocation) {
-            alert("Najpierw wybierz lokalizację na mapie!");
-            return;
-        }
+        // if (!selectedLocation) {
+        //     alert("Najpierw wybierz lokalizację na mapie!");
+        //     return;
+        // }
 
         var details = `
             Wybrana lokalizacja:
@@ -190,7 +165,7 @@
                 break;
             case "2":
                 navigator.clipboard.writeText(`${selectedLocation.lat}, ${selectedLocation.lng}`);
-                alert("Współrzędne skopiowane do schowka!");
+                // alert("Współrzędne skopiowane do schowka!");
                 break;
             case "3":
                 // Anuluj - usuń tymczasowe elementy
