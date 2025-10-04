@@ -19,32 +19,6 @@ filter_raw = '''(
     "Używanie środków odurzających",
     "Wałęsające się bezpańskie psy",
     "Żebractwo"
-)
-AND 
-(
-    (
-        ('Typ'!="Miejsce niebezpiecznej działalności rozrywkowej",
-        "Znęcanie się nad zwierzętami",
-        "Używanie środków odurzających")
-        AND
-        (
-            ('Status'="Nowe","Weryfikacja","Potwierdzone", "Potwierdzone (przekazane poza Policję)")
-            OR
-            (('Status'="Niepotwierdzone") AND ('Data modyfikacji'>=1758924000000))
-            OR
-            (('Status'="Potwierdzone (wyeliminowane)") AND ('Data modyfikacji'>=1756936800000))
-        )
-    )
-    OR
-    (
-        ('Typ'="Miejsce niebezpiecznej działalności rozrywkowej")
-        AND
-        (
-            ('Status'="Potwierdzone")
-            OR ('Status'="Potwierdzone (przekazane poza Policję)")
-            OR (('Status'="Potwierdzone (wyeliminowane)") AND ('Data modyfikacji'>=1756936800000))
-        )
-    )
 )'''
 
 TRUST_WERYFIKACJA = -1
@@ -56,8 +30,8 @@ TRUST_OTHER = 3
 
 
 # Poland bounds in EPSG:2180
-xmin, xmax = 562000, 574000
-ymin, ymax = 236000, 245000
+xmin, xmax = 560000, 578000
+ymin, ymax = 238000, 251000
 tile_size = 378
 
 # ----------CONFIG--------------
@@ -129,7 +103,8 @@ def insert_crime_data(data):
         coordinates = [feature['geometry']['x'], feature['geometry']['y']]
         trust = get_trust(attr['Status'])
         print(date, label, coordinates, trust)
-        if not row_exists(date=date, label=label, coordinates=coordinates):
+        # if not row_exists(date=date, label=label, coordinates=coordinates):
+        if row_exists(date, label, coordinates):
             add_row(
                 date=date,
                 label=label,
@@ -140,10 +115,6 @@ def insert_crime_data(data):
             )
         else:
             print(f"Crime already exists: {date}, {label}, {coordinates}")
-
-
-
-print(f"\nDone! Total features: {len(all_features)}")
 
 if __name__ == "__main__":
     scrap()
