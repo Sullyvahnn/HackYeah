@@ -29,7 +29,7 @@ class CrimeFilter:
             "news niezwiązany z przestępstwem"
         ]
         
-        self.threshold = 0.65
+        self.threshold = 0.45  # Próg pewności
     
     def is_crime_related(self, title: str, teaser: str = "") -> bool:
         """Sprawdza czy artykuł dotyczy przestępstwa"""
