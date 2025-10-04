@@ -120,7 +120,7 @@ class DatabaseManager:
         articles = [dict(row) for row in cursor.fetchall()]
         conn.close()
         
-        print(f"📥 Pobrano {len(articles)} nieprzetworzonych artykułów")
+        print(f"Pobrano {len(articles)} nieprzetworzonych artykułów")
         return articles
     
     def update_processed_article(self, raw_article_id: int, 

@@ -3,10 +3,8 @@ import logging
 import sys
 import os 
 
-# Poprawiona ścieżka - wychodzimy z crime_news_scrapper do src/agent
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Teraz importujemy z agent.db
 from agent.db import initialize_db_manager 
 
 class RawArticlePipeline:
@@ -27,11 +25,10 @@ class RawArticlePipeline:
 
     def open_spider(self, spider):
         """Inicjalizuje DB_MANAGER na początku działania pająka"""
-        # Upewnij się, że folder data/ istnieje
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         
         self.db_manager = initialize_db_manager(self.db_path)
-        self.logger.info(f"✅ Pipeline zainicjalizowany. Baza danych: {self.db_path}")
+        self.logger.info(f"Pipeline zainicjalizowany. Baza danych: {self.db_path}")
 
     def process_item(self, item, spider):
         """Przechwytuje dane i wywołuje metodę zapisu"""
@@ -51,18 +48,18 @@ class RawArticlePipeline:
             
             if article_id:
                 self.saved_count += 1
-                self.logger.info(f"✅ Zapisano ID={article_id}: {title[:50]}...")
+                self.logger.info(f"Zapisano ID={article_id}: {title[:50]}...")
             else:
                 self.skipped_count += 1
-                self.logger.debug(f"ℹ️ Zignorowano (duplikat): {title[:50]}...")
+                self.logger.debug(f"Zignorowano (duplikat): {title[:50]}...")
 
         return item
     
     def close_spider(self, spider):
         """Podsumowanie po zakończeniu scrapowania"""
         self.logger.info("\n" + "="*60)
-        self.logger.info(f"📊 PODSUMOWANIE PIPELINE")
+        self.logger.info(f"PODSUMOWANIE PIPELINE")
         self.logger.info("="*60)
-        self.logger.info(f"  ✅ Zapisane nowe artykuły: {self.saved_count}")
-        self.logger.info(f"  ⏭️  Pominięte (duplikaty): {self.skipped_count}")
+        self.logger.info(f"Zapisane nowe artykuły: {self.saved_count}")
+        self.logger.info(f"Pominięte (duplikaty): {self.skipped_count}")
         self.logger.info("="*60 + "\n")
