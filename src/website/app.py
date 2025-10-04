@@ -7,6 +7,7 @@ from email.message import EmailMessage
 from flask import Flask, render_template, render_template_string, request, redirect, url_for, session, flash, jsonify
 from src.database.db import add_user_alert, get_user_alerts, get_all_alerts
 from src.database.db import LoginForm, connect_db
+from src.heatmap_algo import create_heatmap
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret')
 
@@ -155,6 +156,7 @@ def handle_reports():
 
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
+    return None
 
 
 @app.route('/api/my-alerts')
