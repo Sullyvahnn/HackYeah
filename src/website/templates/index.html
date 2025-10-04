@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <title>DangerMap</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <!-- Your CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/index.css') }}">
+
+  <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js" defer></script>
+
+<!-- Your JS -->
+    <script src="{{ url_for('static', filename='scripts/index.js') }}" defer></script>
+
+
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- Hamburger button -->
+  <button class="menu-btn" onclick="toggleMenu()">☰</button>
+
+  <!-- Side menu -->
+  <div class="side-menu" id="menu">
+    <h2>Menu
+      <button class="close-btn" onclick="toggleMenu()">×</button>
+    </h2>
+
+    <button onclick="enableAlertMode()">Zgłoś alert</button>
+
+    {% if user_email %}
+      <div class="user-info">
+        <p>Zalogowany jako:</p>
+        <strong>{{ user_email }}</strong>
+      </div>
+      <a href="{{ url_for('logout') }}">Wyloguj</a>
+    {% else %}
+      <a href="{{ url_for('login') }}">Zaloguj się</a>
+    {% endif %}
+
+    <!-- Przycisk zamykania menu i powrotu do mapy -->
+    <button style="color: #d62828" onclick="closeMenuAndReturnToMap()">Zamknij menu</button>
+  </div>
+
+
+</body>
+</html>

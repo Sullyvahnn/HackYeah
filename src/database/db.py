@@ -1,14 +1,24 @@
 # db.py
+import os
 import sqlite3
 import json
 from datetime import datetime
-from turtledemo.chaos import coosys
 
-DB_NAME = "scrapped.db"
+from flask_wtf import FlaskForm
+from wtforms import StringField, SubmitField
+from wtforms.validators import DataRequired, Email
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "data.db")
+
+class LoginForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    submit = SubmitField('Wyślij link logowania')
 
 def connect_db():
     """Connects to the SQLite database and creates the table if it doesn’t exist."""
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS scrapped_data (
@@ -21,6 +31,23 @@ def connect_db():
             trust INTEGER
         )
     """)
+    cursor.execute("""
+                CREATE TABLE IF NOT EXISTS tokens
+                (
+                    token
+                    TEXT
+                    PRIMARY
+                    KEY,
+                    email
+                    TEXT,
+                    created_at
+                    INTEGER,
+                    used
+                    INTEGER
+                    DEFAULT
+                    0
+                )
+                """)
     conn.commit()
     return conn
 
@@ -86,10 +113,29 @@ def view_all():
         result.append(row_dict)
     return result
 
-if __name__ == "__main__":
-    # Example usage
-    connect_db()
-    add_row(label="Example", address="123 Main St",city="New York", coordinates=[40.7128, -74.0060], trust=90)
-    print(view_all())
-    delete_row(1)
-    print(view_all())
+
+def row_exists(date, label=None, coordinates=None):
+    """Check if a row with the same date, label, and coordinates already exists."""
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    x, y = (coordinates if coordinates else (None, None))
+
+    cursor.execute('''
+                   SELECT 1
+                   FROM scrapped_data
+                   WHERE date = ?
+                     AND label = ?
+                     AND coordinates = ?
+                       LIMIT 1
+                   ''', (date, label, json.dumps(coordinates)))
+
+    exists = cursor.fetchone() is not None
+    conn.close()
+    return exists
+
+if __name__ == '__main__':
+    conn = connect_db()
+
+
+
