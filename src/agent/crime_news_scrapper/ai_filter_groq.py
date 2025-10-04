@@ -1,7 +1,7 @@
 import logging
 import json
 import os
-import time  # ✅ DODANE
+import time  
 from groq import Groq
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut
@@ -30,10 +30,10 @@ class CrimeFilterLocal:
         self.client = Groq(api_key=api_key)
         self.model = "llama-3.3-70b-versatile"  # Najlepszy darmowy model
         
-        logger.info(f"✅ Model: {self.model}")
-        logger.info("✅ Limit: 30 requestów/minutę (DARMOWE)")
+        logger.info(f"Model: {self.model}")
+        logger.info("Limit: 30 requestów/minutę (DARMOWE)")
         
-        # ✅ DODANE: Throttling
+        # DODANE: Throttling
         self.request_count = 0
         self.last_minute_start = time.time()
         self.max_requests_per_minute = 25  # Bezpieczny margines (30-5)
@@ -42,26 +42,26 @@ class CrimeFilterLocal:
         self.geolocator = Nominatim(user_agent="krakow_crime_groq", timeout=10)
 
     def check_rate_limit(self):
-        """✅ NOWA FUNKCJA: Sprawdza i egzekwuje limit"""
+        """NOWA FUNKCJA: Sprawdza i egzekwuje limit"""
         # Reset licznika co minutę
         if time.time() - self.last_minute_start > 60:
             self.request_count = 0
             self.last_minute_start = time.time()
-            logger.info("🔄 Reset licznika requestów")
+            logger.info("Reset licznika requestów")
         
         # Jeśli osiągnięto limit - czekaj
         if self.request_count >= self.max_requests_per_minute:
             elapsed = time.time() - self.last_minute_start
             if elapsed < 60:
                 wait_time = 60 - elapsed + 2  # +2s bufora
-                logger.warning(f"⏳ LIMIT! Osiągnięto {self.request_count} req. Czekam {wait_time:.0f}s...")
+                logger.warning(f"LIMIT! Osiągnięto {self.request_count} req. Czekam {wait_time:.0f}s...")
                 time.sleep(wait_time)
                 self.request_count = 0
                 self.last_minute_start = time.time()
 
     def ask_llm(self, system_prompt: str, user_prompt: str) -> str:
         """Wysyła zapytanie do Groq"""
-        # ✅ DODANE: Sprawdź limit PRZED requestem
+        # DODANE: Sprawdź limit PRZED requestem
         self.check_rate_limit()
         
         try:
@@ -75,18 +75,18 @@ class CrimeFilterLocal:
                 max_tokens=500
             )
             
-            # ✅ DODANE: Zwiększ licznik PO sukcesie
+            # DODANE: Zwiększ licznik PO sukcesie
             self.request_count += 1
             
             return response.choices[0].message.content.strip()
                 
         except Exception as e:
-            logger.error(f"❌ Błąd Groq: {e}")
+            logger.error(f"Błąd Groq: {e}")
             return ""
 
     def is_crime_related(self, title: str, teaser: str = "", content: str = "") -> bool:
         """
-        ✅ PROMPT 1: Filtruje tytuły - czy to przestępstwo?
+        PROMPT 1: Filtruje tytuły - czy to przestępstwo?
         """
         text = " ".join([title, teaser, content[:200]]).strip()
         
@@ -117,7 +117,7 @@ Odpowiedź (TAK/NIE):"""
 
     def extract_event_info(self, title: str, teaser: str = "", content: str = "") -> dict:
         """
-        ✅ PROMPT 2: Wyciąga szczegóły z TREŚCI artykułu
+        PROMPT 2: Wyciąga szczegóły z TREŚCI artykułu
         """
         text = " ".join([title, teaser, content[:1500]]).strip()
         
@@ -166,10 +166,10 @@ Zwróć TYLKO JSON:"""
                 response = response[start:end]
             
             info = json.loads(response.strip())
-            logger.info(f"✅ LLM: {info['crime_type']} @ {info['location_name']} (waga: {info.get('severity', '?')})")
+            logger.info(f"LLM: {info['crime_type']} @ {info['location_name']} (waga: {info.get('severity', '?')})")
             
         except json.JSONDecodeError as e:
-            logger.error(f"❌ Błąd JSON: {e}")
+            logger.error(f"Błąd JSON: {e}")
             logger.debug(f"Odpowiedź: {response}")
             
             # Fallback
@@ -180,7 +180,6 @@ Zwróć TYLKO JSON:"""
                 "summary": text[:200]
             }
         
-        # ✅ Geokodowanie
         location_name = info.get("location_name", "Kraków")
         
         # Oczyszczanie: usuń "ul.", "ulica", "w ", "na "
@@ -194,7 +193,7 @@ Zwróć TYLKO JSON:"""
         lat, lon = self.geocode_location(location_clean)
         
         if lat is None or lon is None:
-            logger.warning("⚠️ Domyślne współrzędne (centrum)")
+            logger.warning("Domyślne współrzędne (centrum)")
             lat, lon = 50.0614, 19.9366
         
         return {
@@ -213,24 +212,24 @@ Zwróć TYLKO JSON:"""
         
         try:
             full_address = f"{location_name}, Kraków, Polska"
-            logger.info(f"🔍 Geokodowanie: {full_address}")
+            logger.info(f"Geokodowanie: {full_address}")
             
             location = self.geolocator.geocode(full_address, language="pl")
             
             if location:
-                logger.info(f"✅ ({location.latitude:.4f}, {location.longitude:.4f})")
+                logger.info(f"({location.latitude:.4f}, {location.longitude:.4f})")
                 return location.latitude, location.longitude
             
             location = self.geolocator.geocode(f"{location_name}, Polska", language="pl")
             if location:
                 return location.latitude, location.longitude
             
-            logger.warning(f"❌ Nie znaleziono: {location_name}")
+            logger.warning(f"Nie znaleziono: {location_name}")
             return None, None
             
         except GeocoderTimedOut:
-            logger.error("⏱️ Timeout")
+            logger.error("Timeout")
             return None, None
         except Exception as e:
-            logger.error(f"❌ Błąd: {e}")
+            logger.error(f"Błąd: {e}")
             return None, None

@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 try:
     from agent.crime_news_scrapper.malopolska_crime_spider import MalopolskaCrimeSpider
 except ImportError as e:
-    print(f"❌ Błąd importu: {e}")
+    print(f"Błąd importu: {e}")
     print("Upewnij się, że struktura katalogów jest poprawna:")
     print("  agent/crime_news_scrapper/malopolska_crime_spider.py")
     sys.exit(1)
@@ -42,15 +42,15 @@ def check_ollama():
         response = requests.get("http://localhost:11434/api/tags", timeout=5)
         if response.status_code == 200:
             models = [m['name'] for m in response.json()['models']]
-            logger.info(f"✅ Ollama działa! Dostępne modele: {', '.join(models)}")
+            logger.info(f"Ollama działa! Dostępne modele: {', '.join(models)}")
             return True
     except requests.exceptions.ConnectionError:
-        logger.error("❌ Ollama nie działa!")
+        logger.error("Ollama nie działa!")
         logger.error("Uruchom w osobnym terminalu: ollama serve")
         logger.error("Instalacja: https://ollama.com/download")
         return False
     except Exception as e:
-        logger.error(f"❌ Błąd sprawdzania Ollama: {e}")
+        logger.error(f"Błąd sprawdzania Ollama: {e}")
         return False
 
 
@@ -83,19 +83,19 @@ def run_scraping(mode='full'):
         settings.set('CLOSESPIDER_ITEMCOUNT', 20)
         settings.set('CLOSESPIDER_PAGECOUNT', 15)
         settings.set('DOWNLOAD_DELAY', 1.0)
-        logger.info("🚀 TRYB: Szybki test (20 artykułów, 15 stron)")
+        logger.info("TRYB: Szybki test (20 artykułów, 15 stron)")
         
     elif mode == 'police':
         settings.set('CLOSESPIDER_ITEMCOUNT', 30)
         settings.set('CLOSESPIDER_PAGECOUNT', 25)
         settings.set('DOWNLOAD_DELAY', 1.0)
-        logger.info("👮 TRYB: Tylko strony policji")
+        logger.info("TRYB: Tylko strony policji")
         
     else:
         settings.set('CLOSESPIDER_ITEMCOUNT', 150)
         settings.set('CLOSESPIDER_PAGECOUNT', 100)
         settings.set('DOWNLOAD_DELAY', 2.0)
-        logger.info("🌍 TRYB: Pełny scraping Małopolski (150 artykułów)")
+        logger.info("TRYB: Pełny scraping Małopolski (150 artykułów)")
     
     process = CrawlerProcess(settings)
     
@@ -103,29 +103,29 @@ def run_scraping(mode='full'):
     process.crawl(MalopolskaCrimeSpider)
     
     print("\n" + "="*70)
-    print("🕷️  ROZPOCZYNAM SCRAPING MAŁOPOLSKI...")
+    print("ROZPOCZYNAM SCRAPING MAŁOPOLSKI...")
     print("="*70)
-    print(f"📍 Źródła: TVN24, NaszeMiasto, Fakt, Policja")
-    print(f"🤖 AI: Ollama (lokalny LLM - ZERO limitów)")
+    print(f"Źródła: TVN24, NaszeMiasto, Fakt, Policja")
+    print(f"AI: Ollama (lokalny LLM - ZERO limitów)")
     print("="*70 + "\n")
     
     try:
         process.start()
     except KeyboardInterrupt:
-        logger.warning("\n⚠️  Przerwano przez użytkownika (Ctrl+C)")
+        logger.warning("\nPrzerwano przez użytkownika (Ctrl+C)")
         return
     except Exception as e:
-        logger.error(f"❌ Błąd podczas scrapowania: {e}")
+        logger.error(f"Błąd podczas scrapowania: {e}")
         return
     
     print("\n" + "="*70)
-    print("✅ SCRAPING ZAKOŃCZONY!")
+    print("SCRAPING ZAKOŃCZONY!")
     print("="*70)
-    print("\n📁 Sprawdź wyniki:")
+    print("\nSprawdź wyniki:")
     print("  - data/malopolska/events_*.jsonl")
     print("  - data/crime_data.db")
     print("  - data/ollama_cache.json (cache AI)")
-    print("\n💡 TIP: Uruchom dashboard: streamlit run dashboard.py")
+    print("\nTIP: Uruchom dashboard: streamlit run dashboard.py")
     print("="*70 + "\n")
 
 

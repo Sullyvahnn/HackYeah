@@ -37,7 +37,7 @@ class BatchScraper:
         self.total_batches += 1
         
         logger.info("=" * 70)
-        logger.info(f"🚀 BATCH #{self.total_batches} - Cel: {self.batch_items} artykułów")
+        logger.info(f"BATCH #{self.total_batches} - Cel: {self.batch_items} artykułów")
         logger.info("=" * 70)
         
         try:
@@ -59,27 +59,27 @@ class BatchScraper:
             
             # Policz zebrane artykuły z outputu
             output = result.stdout + result.stderr
-            saved = output.count("✅ [")  # Licznik z logów
+            saved = output.count("[")  # Licznik z logów
             self.total_items += saved
             
-            logger.info(f"✅ Batch zakończony: zebrano {saved} artykułów")
-            logger.info(f"📊 TOTAL: {self.total_items} artykułów w {self.total_batches} batchach")
+            logger.info(f"Batch zakończony: zebrano {saved} artykułów")
+            logger.info(f"TOTAL: {self.total_items} artykułów w {self.total_batches} batchach")
             
             return True
             
         except subprocess.TimeoutExpired:
-            logger.error("⏱️ Timeout - batch trwał za długo!")
+            logger.error("Timeout - batch trwał za długo!")
             return False
         except Exception as e:
-            logger.error(f"❌ Błąd: {e}")
+            logger.error(f"Błąd: {e}")
             return False
 
     def run(self):
         """Główna pętla - uruchamia batche przez określony czas"""
-        logger.info("🎯 START BATCH SCRAPERA")
-        logger.info(f"⏱️  Czas działania: {self.duration/60:.0f} minut")
-        logger.info(f"📦 Artykułów na batch: {self.batch_items}")
-        logger.info(f"⏸️  Pauza między batchami: {self.pause}s")
+        logger.info("START BATCH SCRAPERA")
+        logger.info(f"Czas działania: {self.duration/60:.0f} minut")
+        logger.info(f"Artykułów na batch: {self.batch_items}")
+        logger.info(f"Pauza między batchami: {self.pause}s")
         logger.info("=" * 70)
         
         while True:
@@ -88,25 +88,25 @@ class BatchScraper:
             # Sprawdź czy czas się skończył
             if elapsed >= self.duration:
                 logger.info("=" * 70)
-                logger.info("🏁 KONIEC - Osiągnięto limit czasu")
+                logger.info("KONIEC - Osiągnięto limit czasu")
                 break
             
             remaining = self.duration - elapsed
-            logger.info(f"⏰ Pozostało: {remaining/60:.1f} min")
+            logger.info(f"Pozostało: {remaining/60:.1f} min")
             
             # Uruchom batch
             success = self.run_single_batch()
             
             if not success:
-                logger.warning("⚠️  Batch nieudany, ale kontynuuję...")
+                logger.warning("Batch nieudany, ale kontynuuję...")
             
             # Sprawdź czy starczy czasu na następny batch
             if remaining < self.pause + 120:  # 120s = czas na batch
-                logger.info("⏱️  Za mało czasu na kolejny batch")
+                logger.info("Za mało czasu na kolejny batch")
                 break
             
             # Pauza przed następnym batchem
-            logger.info(f"💤 Pauza {self.pause}s (reset limitu API)...")
+            logger.info(f"Pauza {self.pause}s (reset limitu API)...")
             logger.info("")
             time.sleep(self.pause)
         
@@ -119,19 +119,19 @@ class BatchScraper:
         
         logger.info("")
         logger.info("=" * 70)
-        logger.info("📊 PODSUMOWANIE")
+        logger.info("PODSUMOWANIE")
         logger.info("=" * 70)
-        logger.info(f"⏱️  Czas działania: {elapsed/60:.1f} minut")
-        logger.info(f"📦 Uruchomionych batchy: {self.total_batches}")
-        logger.info(f"📰 Zebranych artykułów: {self.total_items}")
+        logger.info(f"Czas działania: {elapsed/60:.1f} minut")
+        logger.info(f"Uruchomionych batchy: {self.total_batches}")
+        logger.info(f"Zebranych artykułów: {self.total_items}")
         
         if self.total_batches > 0:
             avg = self.total_items / self.total_batches
-            logger.info(f"📈 Średnio na batch: {avg:.1f} artykułów")
+            logger.info(f"Średnio na batch: {avg:.1f} artykułów")
         
         logger.info("=" * 70)
-        logger.info(f"✅ Dane zapisane w: data/krakow/events_{datetime.now().date()}.jsonl")
-        logger.info(f"✅ Baza danych: data/crime_data.db")
+        logger.info(f"Dane zapisane w: data/krakow/events_{datetime.now().date()}.jsonl")
+        logger.info(f"Baza danych: data/crime_data.db")
         logger.info("=" * 70)
 
 
@@ -149,7 +149,6 @@ def main():
     scraper = BatchScraper(duration_minutes=30, batch_items=8, pause_seconds=65)
     """
     
-    # 🎯 TWOJA KONFIGURACJA:
     scraper = BatchScraper(
         duration_minutes=20,   # 20 minut działania
         batch_items=5,         # 5 artykułów na batch
@@ -159,7 +158,7 @@ def main():
     try:
         scraper.run()
     except KeyboardInterrupt:
-        logger.info("\n⛔ Przerwano przez użytkownika (Ctrl+C)")
+        logger.info("\nPrzerwano przez użytkownika (Ctrl+C)")
         scraper.print_summary()
 
 

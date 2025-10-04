@@ -48,9 +48,9 @@ class PoliceDirectSpider(scrapy.Spider):
         self.ai_filter = CrimeFilterLocal()
         self.db = initialize_db_manager("data/crime_data.db")
 
-        # ✅ Cache URL z ostatnich 7 dni
+        # Cache URL z ostatnich 7 dni
         self.processed_urls = self._load_processed_urls()
-        self.logger.info(f"📦 Wczytano {len(self.processed_urls)} przetworzonych URL")
+        self.logger.info(f"Wczytano {len(self.processed_urls)} przetworzonych URL")
 
         self.stats = {
             "visited_pages": 0,
@@ -77,7 +77,7 @@ class PoliceDirectSpider(scrapy.Spider):
                 processed.add(row[0])
                 
         except Exception as e:
-            self.logger.warning(f"⚠️ Błąd ładowania cache: {e}")
+            self.logger.warning(f"Błąd ładowania cache: {e}")
         
         return processed
 
@@ -94,7 +94,6 @@ class PoliceDirectSpider(scrapy.Spider):
         article_links = response.css("a[href*='/krk/aktualnosci/']::attr(href)").getall()
         article_titles = response.css("a[href*='/krk/aktualnosci/']::text").getall()
         
-        # ✅ DODAJ: Wyciągnij też daty publikacji (jeśli dostępne)
         articles_with_dates = []
         
         for article in response.css("article, div.news-item, li.news-list-item"):
@@ -118,38 +117,11 @@ class PoliceDirectSpider(scrapy.Spider):
             if not full_url:
                 continue
 
-            # ✅ SKIP już przetworzonych (z cache)
+
             if full_url in self.processed_urls:
                 self.stats["duplicates_skipped"] += 1
                 continue
 
-            # ✅ OPCJONALNIE: Skip artykułów starszych niż 7 dni
-            if article['date']:
-                try:
-                    # Parsuj datę (format może się różnić)
-                    article_date = None
-                    
-                    # Format ISO: 2025-01-15T10:30:00
-                    if 'T' in article['date']:
-                        article_date = datetime.fromisoformat(article['date'].replace('Z', '+00:00'))
-                    # Format DD.MM.YYYY
-                    elif '.' in article['date']:
-                        article_date = datetime.strptime(article['date'], "%d.%m.%Y")
-                    
-                    if article_date and (self.scrape_start - article_date).days > 7:
-                        self.stats["old_articles_skipped"] += 1
-                        self.logger.debug(f"⏭️ Pomijam stary artykuł: {article['date']}")
-                        continue
-                        
-                except Exception as e:
-                    self.logger.debug(f"⚠️ Nie udało się sparsować daty: {article['date']}")
-
-            self.stats["articles_found"] += 1
-            
-            # Wyciągnij tytuł z URL (opcjonalne)
-            title = full_url.split(',')[-1].replace('.html', '').replace('-', ' ')
-            
-            self.logger.info(f"Znaleziono artykuł: {title[:60]}...")
             
             # BEZPOŚREDNIO do ekstrakcji (bez filtrowania!)
             yield scrapy.Request(
@@ -216,7 +188,6 @@ class PoliceDirectSpider(scrapy.Spider):
                 longitude=lon,
             )
 
-            # ✅ Dodaj do cache
             self.processed_urls.add(url)
             self.stats["saved_to_db"] += 1
 

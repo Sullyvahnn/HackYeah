@@ -5,7 +5,7 @@ import logging
 from datetime import date, datetime, timedelta
 from urllib.parse import urlparse, urljoin
 
-from agent.crime_news_scrapper.ai_filter_gemini import CrimeFilterLocal
+from agent.crime_news_scrapper.ai_filter_groq import CrimeFilterLocal
 from agent.db import initialize_db_manager
 
 logger = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ class KrakowCrimeSpider(scrapy.Spider):
         self.db = initialize_db_manager("data/crime_data.db")
 
         self.processed_urls = self._load_processed_urls()
-        self.logger.info(f"📦 Wczytano {len(self.processed_urls)} przetworzonych URL")
+        self.logger.info(f"Wczytano {len(self.processed_urls)} przetworzonych URL")
 
         self.stats = {
             "visited_pages": 0,
@@ -78,7 +78,7 @@ class KrakowCrimeSpider(scrapy.Spider):
                 processed.add(row[0])
                 
         except Exception as e:
-            logger.warning(f"⚠️ Błąd ładowania cache: {e}")
+            logger.warning(f"Błąd ładowania cache: {e}")
         
         return processed
 
@@ -124,7 +124,7 @@ class KrakowCrimeSpider(scrapy.Spider):
             # FILTR TYTUŁU przez AI (z cache!)
             if self.ai_filter.is_crime_related(title):
                 self.stats["passed_ai_filter"] += 1
-                self.logger.info(f"✅ Przeszło: {title[:60]}...")
+                self.logger.info(f"Przeszło: {title[:60]}...")
                 
                 yield scrapy.Request(
                     full_url,
@@ -191,7 +191,7 @@ class KrakowCrimeSpider(scrapy.Spider):
             self.stats["saved_to_db"] += 1
 
         except Exception as e:
-            self.logger.error(f"❌ Błąd zapisu: {e}")
+            self.logger.error(f"Błąd zapisu: {e}")
             return
 
         # Zapis do JSONL

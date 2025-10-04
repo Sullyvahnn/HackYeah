@@ -59,9 +59,9 @@ class CrimeFilterLocal:
                     self.filter_cache = cache_data.get('filter', {})
                     self.extract_cache = cache_data.get('extract', {})
                     self.geocode_cache = cache_data.get('geocode', {})
-                    logger.info(f"📦 Cache: {len(self.filter_cache)} filtrów, {len(self.geocode_cache)} lokalizacji")
+                    logger.info(f"Cache: {len(self.filter_cache)} filtrów, {len(self.geocode_cache)} lokalizacji")
             except Exception as e:
-                logger.warning(f"⚠️ Nie udało się wczytać cache: {e}")
+                logger.warning(f"Nie udało się wczytać cache: {e}")
 
     def _save_cache(self):
         """Zapisz cache na dysk"""
@@ -74,21 +74,21 @@ class CrimeFilterLocal:
                     'geocode': self.geocode_cache
                 }, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            logger.error(f"❌ Błąd zapisu cache: {e}")
+            logger.error(f"Błąd zapisu cache: {e}")
 
     def check_rate_limit(self):
         """Sprawdza i egzekwuje limit RPM"""
         if time.time() - self.last_minute_start > 60:
             self.request_count = 0
             self.last_minute_start = time.time()
-            logger.info("🔄 Reset licznika requestów")
+            logger.info("Reset licznika requestów")
             self._save_cache()
         
         if self.request_count >= self.max_requests_per_minute:
             elapsed = time.time() - self.last_minute_start
             if elapsed < 60:
                 wait_time = 60 - elapsed + 2
-                logger.warning(f"⏳ LIMIT! Czekam {wait_time:.0f}s...")
+                logger.warning(f"LIMIT! Czekam {wait_time:.0f}s...")
                 time.sleep(wait_time)
                 self.request_count = 0
                 self.last_minute_start = time.time()
@@ -111,7 +111,7 @@ class CrimeFilterLocal:
             return response.text.strip()
                 
         except Exception as e:
-            logger.error(f"❌ Błąd Gemini: {e}")
+            logger.error(f"Błąd Gemini: {e}")
             return ""
 
     def is_crime_related(self, title: str, teaser: str = "", content: str = "") -> bool:
@@ -124,7 +124,7 @@ class CrimeFilterLocal:
         # Sprawdź cache
         cache_key = str(hash(text[:100]))
         if cache_key in self.filter_cache:
-            logger.debug(f"💾 Cache hit: {title[:40]}...")
+            logger.debug(f"Cache hit: {title[:40]}...")
             return self.filter_cache[cache_key]
         
         prompt = f"""Jesteś systemem filtrującym wiadomości dla mapy zagrożeń miasta Kraków.
@@ -162,7 +162,7 @@ ODPOWIEDŹ TYLKO: TAK lub NIE (bez dodatkowych słów)"""
         # Sprawdź cache
         cache_key = str(hash(text[:200]))
         if cache_key in self.extract_cache:
-            logger.debug(f"💾 Cache hit extraction: {title[:40]}...")
+            logger.debug(f"Cache hit extraction: {title[:40]}...")
             return self.extract_cache[cache_key]
         
         prompt = f"""Jesteś ekspertem analizującym zdarzenia w Krakowie dla systemu mapy zagrożeń.
@@ -203,10 +203,10 @@ WAŻNE:
                 response = response[start:end]
             
             info = json.loads(response.strip())
-            logger.info(f"✅ LLM: {info['crime_type']} @ {info['location_name']} (waga: {info.get('severity', '?')})")
+            logger.info(f"LLM: {info['crime_type']} @ {info['location_name']} (waga: {info.get('severity', '?')})")
             
         except json.JSONDecodeError as e:
-            logger.error(f"❌ Błąd JSON: {e}")
+            logger.error(f"Błąd JSON: {e}")
             logger.debug(f"Odpowiedź: {response}")
             
             info = {
@@ -228,7 +228,7 @@ WAŻNE:
         lat, lon = self.geocode_location(location_clean)
         
         if lat is None or lon is None:
-            logger.warning("⚠️ Domyślne współrzędne (centrum)")
+            logger.warning("Domyślne współrzędne (centrum)")
             lat, lon = 50.0614, 19.9366
         
         result = {
@@ -252,18 +252,18 @@ WAŻNE:
         
         # Sprawdź cache
         if location_name in self.geocode_cache:
-            logger.debug(f"💾 Geocode cache: {location_name}")
+            logger.debug(f"Geocode cache: {location_name}")
             return tuple(self.geocode_cache[location_name])
         
         try:
             full_address = f"{location_name}, Kraków, Polska"
-            logger.info(f"🔍 Geokodowanie: {full_address}")
+            logger.info(f"Geokodowanie: {full_address}")
             
             location = self.geolocator.geocode(full_address, language="pl")
             
             if location:
                 coords = (location.latitude, location.longitude)
-                logger.info(f"✅ ({coords[0]:.4f}, {coords[1]:.4f})")
+                logger.info(f"({coords[0]:.4f}, {coords[1]:.4f})")
                 self.geocode_cache[location_name] = coords
                 return coords
             
@@ -273,14 +273,14 @@ WAŻNE:
                 self.geocode_cache[location_name] = coords
                 return coords
             
-            logger.warning(f"❌ Nie znaleziono: {location_name}")
+            logger.warning(f"Nie znaleziono: {location_name}")
             return None, None
             
         except GeocoderTimedOut:
-            logger.error("⏱️ Timeout")
+            logger.error("Timeout")
             return None, None
         except Exception as e:
-            logger.error(f"❌ Błąd: {e}")
+            logger.error(f"Błąd: {e}")
             return None, None
 
     def __del__(self):

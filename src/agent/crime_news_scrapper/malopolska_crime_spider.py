@@ -15,7 +15,7 @@ class MalopolskaCrimeSpider(scrapy.Spider):
     """Spider analizujący wiadomości z CAŁEJ Małopolski - używa Ollama AI"""
     name = 'malopolska_crime'
 
-    # ✅ WSZYSTKIE miasta Małopolski + ogólne źródła
+    # WSZYSTKIE miasta Małopolski + ogólne źródła
     start_urls = [
         # === KRAKÓW ===
         'https://tvn24.pl/krakow',
@@ -75,14 +75,24 @@ class MalopolskaCrimeSpider(scrapy.Spider):
         os.makedirs(self.output_dir, exist_ok=True)
 
         self.output_file = os.path.join(self.output_dir, f"events_{date.today()}.jsonl")
-        self.logger.info(f"📁 Zapis do: {self.output_file}")
+        self.logger.info(f"Zapis do: {self.output_file}")
+        
+        # GWARANCJA UTWORZENIA PLIKU JSONL
+        if not os.path.exists(self.output_file):
+            try:
+                with open(self.output_file, 'w', encoding='utf-8') as f:
+                    pass
+                self.logger.info(f"Utworzono pusty plik: {self.output_file}")
+            except Exception as e:
+                self.logger.error(f"Nie udało się utworzyć pliku JSONL: {e}")
+
 
         # Model AI (Ollama - lokalny!)
         self.ai_filter = CrimeFilterLocal()
         self.db = initialize_db_manager("data/crime_data.db")
 
         self.processed_urls = self._load_processed_urls()
-        self.logger.info(f"📦 Wczytano {len(self.processed_urls)} przetworzonych URL (ostatnie 7 dni)")
+        self.logger.info(f"Wczytano {len(self.processed_urls)} przetworzonych URL (ostatnie 7 dni)")
 
         self.stats = {
             "visited_pages": 0,
@@ -110,7 +120,7 @@ class MalopolskaCrimeSpider(scrapy.Spider):
                 processed.add(row[0])
                 
         except Exception as e:
-            logger.warning(f"⚠️ Błąd ładowania cache: {e}")
+            logger.warning(f"Błąd ładowania cache: {e}")
         
         return processed
 
@@ -121,7 +131,7 @@ class MalopolskaCrimeSpider(scrapy.Spider):
         self.logger.info(f"[PAGE {self.stats['visited_pages']}] {response.url}")
 
         allowed_domains = ['tvn24.pl', 'naszemiasto.pl', 'gazetakrakowska.pl', 
-                          'fakt.pl', 'policja.gov.pl']
+                           'fakt.pl', 'policja.gov.pl']
 
         # POPRAWIONE: Prostsze pobieranie linków (bez XPath)
         for link in response.css("a"):
@@ -156,7 +166,7 @@ class MalopolskaCrimeSpider(scrapy.Spider):
             # FILTR TYTUŁU przez AI (z cache!)
             if self.ai_filter.is_crime_related(title):
                 self.stats["passed_ai_filter"] += 1
-                self.logger.info(f"✅ Przeszło: {title[:60]}...")
+                self.logger.info(f"Przeszło: {title[:60]}...")
                 
                 yield scrapy.Request(
                     full_url,
@@ -165,11 +175,12 @@ class MalopolskaCrimeSpider(scrapy.Spider):
                     dont_filter=True,
                 )
 
-        # Paginacja
-        if self.stats["passed_ai_filter"] > 0:
-            next_page = response.css('a[rel="next"]::attr(href), a.pagination__next::attr(href)').get()
-            if next_page:
-                yield response.follow(next_page, self.parse)
+        # Paginacja: Zawsze szukaj następnej strony.
+        # USUNIĘTO WARUNEK if self.stats["passed_ai_filter"] > 0
+        next_page = response.css('a[rel="next"]::attr(href), a.pagination__next::attr(href)').get()
+        if next_page:
+            self.logger.info(f"Przechodzę do następnej strony: {next_page}")
+            yield response.follow(next_page, self.parse)
 
     def parse_article(self, response):
         """KROK 2: Wchodzi w artykuł i AI wyciąga szczegóły"""
@@ -199,7 +210,7 @@ class MalopolskaCrimeSpider(scrapy.Spider):
         summary = info["short_summary"]
 
         if lat is None or lon is None:
-            self.logger.warning(f"Brak współrzędnych dla {location_name}, pomijam")  
+            self.logger.warning(f"❌ Brak współrzędnych dla {location_name}, pomijam") 
             return
 
         # Zapis do bazy
@@ -250,15 +261,23 @@ class MalopolskaCrimeSpider(scrapy.Spider):
         )
 
     def closed(self, reason):
-        """Podsumowanie"""
+        """Podsumowanie i WYMUSZONY ZAPIS CACHE"""
         self.logger.info("=" * 60)
+        
+        # ZAPIS CACHE
+        try:
+            self.ai_filter._save_cache() 
+            self.logger.info("Cache Ollama zapisany przed zamknięciem.")
+        except Exception as e:
+            self.logger.error(f"Błąd zapisu cache: {e}")
+        
         self.logger.info("Zakończono scrapowanie Krakowa")
         self.logger.info("-" * 60)
         for k, v in self.stats.items():
-            self.logger.info(f"  {k}: {v}")
+            self.logger.info(f"  {k}: {v}")
         
         if self.stats["articles_checked"] > 0:
             efficiency = 100 * self.stats["saved_to_db"] / self.stats["articles_checked"]
-            self.logger.info(f"  Efektywność: {efficiency:.1f}%")
+            self.logger.info(f"  Efektywność: {efficiency:.1f}%")
         
         self.logger.info("=" * 60)
