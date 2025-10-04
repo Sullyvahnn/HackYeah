@@ -161,13 +161,27 @@ class BatchProcessor:
             
             print(f"\n📄 Przetwarzam artykuł ID={article_id}")
             
+            # KROK 1: Ekstrakcja przez AI
             result = self.ai_processor.process_article(text)
             
+            # KROK 2: Geokodowanie (opcjonalne)
             location = result['location']
             coords = self.ai_processor.geocode_location(location)
             
             latitude = coords[0] if coords else None
             longitude = coords[1] if coords else None
             
+            # KROK 3: Zapis do bazy (POPRAWIONE!)
             DB_MANAGER.update_processed_article(
-                raw_article_id
+                raw_article_id=article_id,
+                crime_type=result['crime_type'],
+                location=location,
+                summary=result['summary'],
+                keywords=result['keywords'],
+                latitude=latitude,
+                longitude=longitude
+            )
+            
+            processed_count += 1
+        
+        return processed_count
