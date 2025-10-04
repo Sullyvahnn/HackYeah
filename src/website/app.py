@@ -100,14 +100,12 @@ def magic(token):
     conn.close()
 
     session['user_email'] = row['email']
-    flash("Zalogowano pomyślnie!")
     return redirect(url_for('index'))
 
 
 @app.route('/logout')
 def logout():
     session.pop('user_email', None)
-    flash("Wylogowano pomyślnie!")
     return redirect(url_for('index'))
 
 
