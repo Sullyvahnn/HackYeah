@@ -103,8 +103,7 @@ def insert_crime_data(data):
         coordinates = [feature['geometry']['x'], feature['geometry']['y']]
         trust = get_trust(attr['Status'])
         print(date, label, coordinates, trust)
-        # if not row_exists(date=date, label=label, coordinates=coordinates):
-        if row_exists(date, label, coordinates):
+        if not row_exists(date, label, coordinates):
             add_row(
                 date=date,
                 label=label,
