@@ -8,6 +8,11 @@ class DatabaseManager:
     
     def __init__(self, db_path: str = "crime_data.db"):
         self.db_path = db_path
+
+        db_dir = os.path.dirname(self.db_path)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir, exist_ok=True)
+            print(f"Utworzono folder: {db_dir}")
         self.init_database()
     
     def get_connection(self):
