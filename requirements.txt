@@ -1,23 +1,15 @@
-# === WEB SCRAPING ===
-scrapy>=2.11.0
-beautifulsoup4>=4.12.0
-requests>=2.31.0
 
-# === AI / ML ===
-transformers>=4.35.0
-torch>=2.1.0
-sentencepiece>=0.1.99
-protobuf>=4.23.0
+flask                               
+transformers                        # Biblioteka do modeli NLP (np. BERT, GPT)
+torch                               # PyTorch (jako backend dla Transformers)
+keybert                             # Biblioteka do ekstrakcji słów kluczowych
+sentence-transformers               # Wymagana przez KeyBERT do modeli SBERT (np. p araphrase-multilingual-MiniLM-L12-v2)
 
-# === GEOLOCATION ===
-geopy>=2.4.0
+# --- Pakiety dla modułu Scrapującego ---
+scrapy                              # Framework do zaawansowanego scrapowania
+requests                            # Do ewentualnego testowania lub prostego pobierania URL-i
+beautifulsoup4                      # Do parsowania HTML (jeśli Scrapy korzysta z oddzielnej logiki parsowania)
 
-# === WEB FRAMEWORK (Flask) ===
-flask>=3.0.0
-flask-cors>=4.0.0
-
-# === DATABASE ===
-# sqlite3 jest wbudowane w Python
-
-# === UTILITIES ===
-python-dotenv>=1.0.0
+# --- Pakiety bazodanowe i narzędziowe ---
+# sqlite3 jest wbudowany w Pythona, ale jeśli używasz np. PostgreSQL, dodaj:
+# psycopg2-binary

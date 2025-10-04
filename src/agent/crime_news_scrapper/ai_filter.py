@@ -6,7 +6,7 @@ class CrimeFilter:
     
     def __init__(self, model_name: str = "joeddav/xlm-roberta-large-xnli"):
         self.logger = logging.getLogger(__name__)
-        self.logger.info(f"Ładuję filtr AI: {model_name}")
+        self.logger.info(f"🤖 Ładuję filtr AI: {model_name}")
         
         try:
             self.classifier = pipeline(
@@ -14,9 +14,9 @@ class CrimeFilter:
                 model=model_name,
                 device=-1
             )
-            self.logger.info("Filtr AI załadowany!")
+            self.logger.info("✅ Filtr AI załadowany!")
         except Exception as e:
-            self.logger.error(f"Błąd ładowania modelu: {e}")
+            self.logger.error(f"❌ Błąd ładowania modelu: {e}")
             self.classifier = None
         
         self.crime_labels = [
@@ -34,7 +34,7 @@ class CrimeFilter:
     def is_crime_related(self, title: str, teaser: str = "") -> bool:
         """Sprawdza czy artykuł dotyczy przestępstwa"""
         if not self.classifier:
-            self.logger.warning("Model nie załadowany - przepuszczam artykuł")
+            self.logger.warning("⚠️ Model nie załadowany - przepuszczam artykuł")
             return True
         
         text = f"{title}. {teaser or ''}".strip()
@@ -62,7 +62,7 @@ class CrimeFilter:
             return top_score > self.threshold
             
         except Exception as e:
-            self.logger.error(f"Błąd klasyfikacji: {e}")
+            self.logger.error(f"❌ Błąd klasyfikacji: {e}")
             return True
     
     def batch_filter(self, articles: list) -> list:
@@ -77,7 +77,7 @@ class CrimeFilter:
                 filtered.append(article)
         
         self.logger.info(
-            f"Filtracja: {len(filtered)}/{len(articles)} artykułów przeszło"
+            f"📊 Filtracja: {len(filtered)}/{len(articles)} artykułów przeszło"
         )
         
         return filtered
