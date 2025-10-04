@@ -1,7 +1,6 @@
 import requests
-import json
 from time import sleep
-from src.scrapper.database.db import add_row, row_exists
+from src.database.db import add_row, row_exists
 from datetime import datetime
 
 # ----------CONFIG--------------

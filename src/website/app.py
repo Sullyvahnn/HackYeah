@@ -7,7 +7,7 @@ from email.message import EmailMessage
 from flask import Flask, render_template, render_template_string, request, redirect, url_for, session, flash
 
 
-from src.website.user_db.db import LoginForm, get_db
+from src.database.db import LoginForm, connect_db
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret')
 
@@ -72,7 +72,7 @@ def login():
         now = int(time.time())
 
         # Zapisz token do bazy
-        conn = get_db()
+        conn = connect_db()
         cur = conn.cursor()
         cur.execute("INSERT INTO tokens(token,email,created_at,used) VALUES (?,?,?,0)", (token, email, now))
         conn.commit()
@@ -89,10 +89,11 @@ def login():
 
 @app.route('/magic/<token>')
 def magic(token):
-    conn = get_db()
+    conn = connect_db()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM tokens WHERE token=?", (token,))
+    cur.execute("SELECT * FROM tokens WHERE token = ?", (token,))
     row = cur.fetchone()
+    print(row)
 
     if not row:
         return render_template_string("<h1>Błąd</h1><p>Nieprawidłowy link.</p>")
