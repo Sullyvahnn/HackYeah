@@ -3,10 +3,12 @@ import sys
 import os
 import time
 
-# Dodaj ścieżkę do src/
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+# Importujemy tylko CrimeFilter. DB_MANAGER będzie używany w Pipeline.
+from db import initialize_db_manager
 
 from agent.crime_news_scrapper.ai_filter import CrimeFilter 
+
 
 class CrimeNewsSpider(scrapy.Spider):
     """Spider do scrapowania artykułów o przestępstwach"""
@@ -14,6 +16,7 @@ class CrimeNewsSpider(scrapy.Spider):
     
     start_urls = [
         'https://tvn24.pl/krakow',
+        # Dodaj więcej stron kategorii dla lepszych wyników
     ]
     
     custom_settings = {
@@ -29,31 +32,29 @@ class CrimeNewsSpider(scrapy.Spider):
         super().__init__(*args, **kwargs)
         
         init_start_time = time.time()
-        self.logger.info("🤖 Inicjalizuję AI Filter...")
+        print("Inicjalizuję AI Filter...")
         
         self.ai_filter = CrimeFilter() 
         
         init_elapsed = time.time() - init_start_time
-        self.logger.info(f"✅ AI Filter zainicjalizowany w: {init_elapsed:.2f}s")
+        print(f" AI Filter zainicjalizowany w: {init_elapsed:.2f}s")
         
         self.scraped_count = 0
-        self.filtered_count = 0
-        self.passed_count = 0
+        self.saved_count = 0 # To pole będzie teraz mniej precyzyjne, lepiej polegać na logach Pipeline
     
     def parse(self, response):
         """Główna metoda parsowania i wstępnej filtracji"""
         self.logger.info(f"🔍 Scrapuję: {response.url}")
         
-        # Selektory dla TVN24 - artykuły z linkami
-        for article in response.css('article a[href], div.article-item a[href]'):
-            url = article.css('::attr(href)').get()
-            title = article.css('::attr(title)').get() or article.css('::text').get()
+        # Selektory dla TVN24
+        for article in response.css('a[title][href*="st"]'):
             
-            # Zajawka może być w różnych miejscach
-            teaser = article.css('p::text, span.description::text').get()
+            url = article.css('::attr(href)').get()
+            title = article.css('::attr(title)').get() 
+            # Użycie ogólnego selektora na wypadek, gdyby zajawka była w innym miejscu
+            teaser = article.css('div.TextBox span::text, p::text').get() 
 
             if title and url:
-                # Upewnij się, że URL jest pełny
                 full_url = response.urljoin(url)
                 source = response.url.split('/')[2]
                 
@@ -61,25 +62,17 @@ class CrimeNewsSpider(scrapy.Spider):
                 
                 # Krok 1: Wstępna Filtracja AI
                 if self.ai_filter.is_crime_related(title, teaser or ''):
-                    self.passed_count += 1
-                    self.logger.info(f"✅ [{self.passed_count}] Przeszło filtr: {title[:60]}...")
+                    self.logger.info(f"✅ Przeszło filtr AI: {title[:60]}...")
                     
                     yield scrapy.Request(
                         full_url,
                         callback=self.parse_full_article,
                         meta={'title': title, 'source': source, 'url': full_url},
                         errback=self.handle_error,
-                        dont_filter=False  # Pozwól Scrapy filtrować duplikaty URL
+                        dont_filter=True
                     )
                 else:
-                    self.filtered_count += 1
-                    self.logger.debug(f"❌ [{self.filtered_count}] Odrzucono: {title[:60]}...")
-        
-        # Podążaj za następnymi stronami paginacji (opcjonalnie)
-        next_page = response.css('a.next::attr(href), a[rel="next"]::attr(href)').get()
-        if next_page:
-            self.logger.info(f"➡️ Przechodzę do następnej strony")
-            yield response.follow(next_page, self.parse)
+                    self.logger.debug(f"❌ Odrzucono filtr AI: {title[:60]}...")
         
     def parse_full_article(self, response):
         """Pobiera pełny tekst artykułu i przekazuje do Pipeline"""
@@ -87,11 +80,9 @@ class CrimeNewsSpider(scrapy.Spider):
         source = response.meta['source']
         url = response.meta['url']
         
-        # Poprawiony selektor dla treści artykułu TVN24
+        # Poprawiony selektor dla treści artykułu
         paragraphs = response.css('''
-            article p::text,
             div.article-body p::text,
-            div.article__body p::text,
             div[class*="content"] p::text,
             div.text-content p::text
         ''').getall()
@@ -99,7 +90,6 @@ class CrimeNewsSpider(scrapy.Spider):
         raw_text = '\n'.join(p.strip() for p in paragraphs if p.strip())
         
         if raw_text and len(raw_text) > 100:
-            self.logger.info(f"📄 Pełny tekst pobrany ({len(raw_text)} znaków): {title[:50]}...")
             # Krok 2: Zwracanie danych do Pipeline
             yield { 
                 'url': url,
@@ -108,18 +98,18 @@ class CrimeNewsSpider(scrapy.Spider):
                 'source': source
             }
         else:
-            self.logger.warning(f"⚠️ Za mało tekstu ({len(raw_text)} znaków): {url}")
+            self.logger.warning(f"Za mało tekstu lub błąd parsowania: {url}")
+    
     
     def handle_error(self, failure):
-        self.logger.error(f"❌ Błąd pobierania: {failure.request.url}")
+        self.logger.error(f" Błąd: {failure.request.url}")
     
     def closed(self, reason):
-        self.logger.info("\n" + "="*70)
-        self.logger.info(f"📊 PODSUMOWANIE SCRAPOWANIA")
-        self.logger.info("="*70)
-        self.logger.info(f"  🔍 Znalezione artykuły: {self.scraped_count}")
-        self.logger.info(f"  ✅ Przeszło filtr AI: {self.passed_count}")
-        self.logger.info(f"  ❌ Odrzucone przez AI: {self.filtered_count}")
+        self.logger.info("\n" + "="*60)
+        self.logger.info(f"PODSUMOWANIE SCRAPOWANIA")
+        self.logger.info("="*60)
+        self.logger.info(f"  Znalezione artykuły: {self.scraped_count}")
+        self.logger.info(f"  Zapisane do bazy: {self.saved_count}")
         if self.scraped_count > 0:
-            self.logger.info(f"  📈 Wskaźnik filtracji: {(self.passed_count/self.scraped_count*100):.1f}%")
-        self.logger.info("="*70 + "\n")
+            self.logger.info(f"  Wskaźnik filtracji: {(self.saved_count/self.scraped_count*100):.1f}%")
+        self.logger.info("="*60 + "\n")
