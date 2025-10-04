@@ -1,21 +1,22 @@
 import scrapy
 import sys
 import os
+import time
 
-# Import z folderu nadrzędnego
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+# Importujemy tylko CrimeFilter. DB_MANAGER będzie używany w Pipeline.
+from db import initialize_db_manager
 
-from agent.db import DB_MANAGER
-from agent.crime_news_scrapper.ai_filter import CrimeFilter
+from agent.crime_news_scrapper.ai_filter import CrimeFilter 
 
 
 class CrimeNewsSpider(scrapy.Spider):
     """Spider do scrapowania artykułów o przestępstwach"""
     name = 'crime_news'
     
-    # ŹRÓDŁA - możesz je edytować!
     start_urls = [
-        'https://www.tvn24.pl/polska',
+        'https://tvn24.pl/krakow',
+        # Dodaj więcej stron kategorii dla lepszych wyników
     ]
     
     custom_settings = {
@@ -29,70 +30,86 @@ class CrimeNewsSpider(scrapy.Spider):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ai_filter = CrimeFilter()
+        
+        init_start_time = time.time()
+        print("Inicjalizuję AI Filter...")
+        
+        self.ai_filter = CrimeFilter() 
+        
+        init_elapsed = time.time() - init_start_time
+        print(f" AI Filter zainicjalizowany w: {init_elapsed:.2f}s")
+        
         self.scraped_count = 0
-        self.saved_count = 0
+        self.saved_count = 0 # To pole będzie teraz mniej precyzyjne, lepiej polegać na logach Pipeline
     
     def parse(self, response):
-        """Główna metoda parsowania"""
+        """Główna metoda parsowania i wstępnej filtracji"""
         self.logger.info(f"🔍 Scrapuję: {response.url}")
         
-        # UNIWERSALNY PARSER - szuka artykułów
-        for article in response.css('article, div[class*="article"]'):
-            title = (
-                article.css('h1::text, h2::text, h3::text').get() or
-                article.css('[class*="title"]::text, [class*="headline"]::text').get()
-            )
+        # Selektory dla TVN24
+        for article in response.css('a[title][href*="st"]'):
             
-            url = article.css('a::attr(href)').get()
-            teaser = article.css('p::text, [class*="lead"]::text, [class*="teaser"]::text').get()
-            
+            url = article.css('::attr(href)').get()
+            title = article.css('::attr(title)').get() 
+            # Użycie ogólnego selektora na wypadek, gdyby zajawka była w innym miejscu
+            teaser = article.css('div.TextBox span::text, p::text').get() 
+
             if title and url:
                 full_url = response.urljoin(url)
                 source = response.url.split('/')[2]
                 
                 self.scraped_count += 1
                 
-                # Filtruj przez AI
+                # Krok 1: Wstępna Filtracja AI
                 if self.ai_filter.is_crime_related(title, teaser or ''):
-                    self.logger.info(f"✅ Przeszło filtr: {title[:60]}...")
+                    self.logger.info(f"✅ Przeszło filtr AI: {title[:60]}...")
                     
                     yield scrapy.Request(
                         full_url,
                         callback=self.parse_full_article,
                         meta={'title': title, 'source': source, 'url': full_url},
-                        errback=self.handle_error
+                        errback=self.handle_error,
+                        dont_filter=True
                     )
-    
+                else:
+                    self.logger.debug(f"❌ Odrzucono filtr AI: {title[:60]}...")
+        
     def parse_full_article(self, response):
-        """Parsuje pełny artykuł"""
+        """Pobiera pełny tekst artykułu i przekazuje do Pipeline"""
         title = response.meta['title']
         source = response.meta['source']
         url = response.meta['url']
         
-        # Pobierz wszystkie paragrafy
-        paragraphs = response.css('article p::text, main p::text, div[class*="content"] p::text').getall()
+        # Poprawiony selektor dla treści artykułu
+        paragraphs = response.css('''
+            div.article-body p::text,
+            div[class*="content"] p::text,
+            div.text-content p::text
+        ''').getall()
+        
         raw_text = '\n'.join(p.strip() for p in paragraphs if p.strip())
         
         if raw_text and len(raw_text) > 100:
-            article_id = DB_MANAGER.save_raw_article(
-                url=url,
-                title=title,
-                raw_text=raw_text,
-                source=source
-            )
-            
-            if article_id:
-                self.saved_count += 1
-                self.logger.info(f"💾 Zapisano [{self.saved_count}]: {title[:60]}...")
+            # Krok 2: Zwracanie danych do Pipeline
+            yield { 
+                'url': url,
+                'title': title,
+                'raw_text': raw_text,
+                'source': source
+            }
+        else:
+            self.logger.warning(f"Za mało tekstu lub błąd parsowania: {url}")
+    
     
     def handle_error(self, failure):
-        self.logger.error(f"❌ Błąd: {failure.request.url}")
+        self.logger.error(f" Błąd: {failure.request.url}")
     
     def closed(self, reason):
-        self.logger.info(f"\n{'='*60}")
-        self.logger.info(f"📊 PODSUMOWANIE")
-        self.logger.info(f"{'='*60}")
-        self.logger.info(f"  Znalezione: {self.scraped_count}")
-        self.logger.info(f"  Zapisane: {self.saved_count}")
-        self.logger.info(f"{'='*60}\n")
+        self.logger.info("\n" + "="*60)
+        self.logger.info(f"PODSUMOWANIE SCRAPOWANIA")
+        self.logger.info("="*60)
+        self.logger.info(f"  Znalezione artykuły: {self.scraped_count}")
+        self.logger.info(f"  Zapisane do bazy: {self.saved_count}")
+        if self.scraped_count > 0:
+            self.logger.info(f"  Wskaźnik filtracji: {(self.saved_count/self.scraped_count*100):.1f}%")
+        self.logger.info("="*60 + "\n")

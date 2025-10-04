@@ -7,6 +7,7 @@ requests>=2.31.0
 transformers>=4.35.0
 torch>=2.1.0
 sentencepiece>=0.1.99
+protobuf>=4.23.0
 
 # === GEOLOCATION ===
 geopy>=2.4.0
