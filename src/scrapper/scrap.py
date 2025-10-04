@@ -19,6 +19,32 @@ filter_raw = '''(
     "Używanie środków odurzających",
     "Wałęsające się bezpańskie psy",
     "Żebractwo"
+)
+AND 
+(
+    (
+        ('Typ'!="Miejsce niebezpiecznej działalności rozrywkowej",
+        "Znęcanie się nad zwierzętami",
+        "Używanie środków odurzających")
+        AND
+        (
+            ('Status'="Nowe","Weryfikacja","Potwierdzone", "Potwierdzone (przekazane poza Policję)")
+            OR
+            (('Status'="Niepotwierdzone") AND ('Data modyfikacji'>=1758924000000))
+            OR
+            (('Status'="Potwierdzone (wyeliminowane)") AND ('Data modyfikacji'>=1756936800000))
+        )
+    )
+    OR
+    (
+        ('Typ'="Miejsce niebezpiecznej działalności rozrywkowej")
+        AND
+        (
+            ('Status'="Potwierdzone")
+            OR ('Status'="Potwierdzone (przekazane poza Policję)")
+            OR (('Status'="Potwierdzone (wyeliminowane)") AND ('Data modyfikacji'>=1756936800000))
+        )
+    )
 )'''
 
 TRUST_WERYFIKACJA = -1
@@ -78,9 +104,21 @@ def scrap():
 
 
 def millis_to_date(ms):
+    """Converts Unix time in milliseconds to a human-readable date string.
+       Returns None if timestamp is missing or older than year 2000."""
     if ms is None:
-        return datetime.fromtimestamp(0)
-    return datetime.fromtimestamp(ms / 1000).strftime('%Y-%m-%d %H:%M:%S')
+        return None  # No timestamp given
+
+    try:
+        date = datetime.fromtimestamp(ms / 1000)
+    except Exception:
+        return None
+
+    # Skip dates older than year 2000
+    if date.year < 2000:
+        return None
+
+    return date.strftime('%Y-%m-%d %H:%M:%S')
 
 # Function to get trust value from status
 def get_trust(status):
@@ -99,11 +137,14 @@ def insert_crime_data(data):
     for feature in data['features']:
         attr = feature['attributes']
         date = millis_to_date(attr['Data zdarzenia'])
+        if date is None:
+            continue
         label = attr['Typ']
         coordinates = [feature['geometry']['x'], feature['geometry']['y']]
         trust = get_trust(attr['Status'])
         print(date, label, coordinates, trust)
-        if not row_exists(date, label, coordinates):
+
+        if not row_exists(date=date, label=label, coordinates=coordinates):
             add_row(
                 date=date,
                 label=label,
