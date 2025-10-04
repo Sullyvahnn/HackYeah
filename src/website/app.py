@@ -4,10 +4,10 @@ import uuid
 import time
 import smtplib
 from email.message import EmailMessage
-from flask import Flask, render_template, render_template_string, request, redirect, url_for, session, flash
-
-
+from flask import Flask, render_template, render_template_string, request, redirect, url_for, session, flash, jsonify
+from src.database.db import add_user_alert, get_user_alerts, get_all_alerts
 from src.database.db import LoginForm, connect_db
+from src.heatmap_algo import create_heatmap
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret')
 
@@ -126,14 +126,82 @@ reports_data = []  # Tymczasowe przechowywanie alertów
 
 
 @app.route('/api/reports', methods=['GET', 'POST'])
-def reports():
-    if request.method == 'POST':
-        data = request.get_json()
-        print("Nowy alert:", data)
-        reports_data.append(data)
-        return {"status": "ok"}
-    return reports_data
+def handle_reports():
+    if request.method == 'GET':
+        alerts = get_all_alerts()
+        return jsonify(alerts)
 
+    elif request.method == 'POST':
+        if not session.get('user_email'):
+            return jsonify({"status": "error", "message": "Nie jesteś zalogowany/a"}), 401
+
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "Brak danych"}), 400
+
+        user_email = session['user_email']
+
+        try:
+            success = add_user_alert(
+                email=user_email,
+                lat=data['lat'],
+                lng=data['lng'],
+                label="Alert użytkownika"
+            )
+
+            if success:
+                return jsonify({"status": "success", "message": "Alert dodany pomyślnie."})
+            else:
+                return jsonify({"status": "error", "message": "Błąd podczas dodawania alertu"}), 500
+
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+    return None
+
+
+@app.route('/api/my-alerts')
+def get_my_alerts():
+    if not session.get('user_email'):
+        return jsonify([])
+
+    user_email = session['user_email']
+    alerts = get_user_alerts(user_email)
+    return jsonify(alerts)
+
+
+
+@app.route('/api/heatmap', methods=['GET'])
+def get_heatmap():
+    try:
+        # Generate heatmap with specified parameters
+        heatmap, bounds, grid_info = create_heatmap(
+            resolution=100,
+            radius_meters=100.0,
+            normalize=True
+        )
+
+        if heatmap is None:
+            return jsonify({
+                'status': 'error',
+                'message': 'No data available for heatmap'
+            }), 404
+
+        # Return properly structured response
+        return jsonify({
+            'status': 'ok',
+            'data': {
+                'heatmap': heatmap.tolist(),
+                'bounds': bounds,
+                'grid_info': grid_info
+            }
+        })
+
+    except Exception as e:
+        print(f"Heatmap error: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

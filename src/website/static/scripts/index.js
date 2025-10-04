@@ -1,14 +1,155 @@
-    var map = L.map('map').setView([50.0647, 19.9450], 13);
-    var alertMode = false;
-    var selectedLocation = null; // Przechowuje wybrane współrzędne
-    var tempMarker = null; // Tymczasowy marker
-    var tempCircle = null; // Tymczasowy okrąg
-
-
+var map = L.map('map').setView([50.0647, 19.9450], 13);
+var alertMode = false;
+var selectedLocation = null;
+var tempMarker = null;
+var tempCircle = null;
+var heatmapLayer = null;
+var userMarkers = [];
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
     }).addTo(map);
+function loadAllAlerts() {
+    fetch("/api/reports")
+        .then(res => {
+            if (!res.ok) throw new Error('Network response was not ok');
+            return res.json();
+        })
+        .then(data => {
+            // Usuń stare markery
+            userMarkers.forEach(item => {
+                map.removeLayer(item.marker);
+                map.removeLayer(item.circle);
+            });
+            userMarkers = [];
 
+            // Dodaj nowe markery
+            data.forEach(alert => {
+                // Use x and y from the API
+                if (alert.x != null && alert.y != null) {
+                    var latlng = [alert.x, alert.y];
+
+                    var marker = L.marker(latlng).addTo(map)
+                        .bindPopup(`
+                            <b>${alert.label || 'Alert'}</b><br>
+                            Data: ${alert.date}<br>
+                            ${alert.email ? `Użytkownik: ${alert.email}` : ''}
+                        `);
+
+                    var circle = L.circle(latlng, {
+                        radius: 50,
+                        color: 'red',
+                        fillColor: '#f03',
+                        fillOpacity: 0.2
+                    }).addTo(map);
+
+                    userMarkers.push({
+                        marker: marker,
+                        circle: circle,
+                        id: alert.id
+                    });
+                }
+            });
+        })
+        .catch(error => {
+            console.error("Błąd podczas ładowania alertów:", error);
+        });
+}
+
+function getHeatColor(value, min, max) {
+    const t = (normalized - 0.75) * 4;
+    var normalized = (value - min) / (max - min);
+
+    if (normalized < 0.25) {
+        var alpha = normalized * 4;
+        return `rgba(255, 255, 0, ${alpha * 0.8})`; // stronger transparency
+    } else if (normalized < 0.5) {
+        return `rgba(255, ${255 - t * 128}, 0, ${0.7 + t * 0.3})`;
+    } else if (normalized < 0.75) {
+        return `rgba(255, ${127 - t * 127}, 0, ${0.9})`;
+    } else {
+        return `rgba(${255 - t * 55}, 0, 0, 1)`; // full opacity
+    }
+}
+
+function drawHeatmapCanvas(heatmapData, bounds) {
+    var canvas = document.createElement('canvas');
+    var resolution = heatmapData.grid_info.resolution;
+    canvas.width = resolution;
+    canvas.height = resolution;
+
+    var ctx = canvas.getContext('2d');
+    var grid = heatmapData.heatmap;
+
+    // Find min and max values for color scaling
+    var flatGrid = grid.flat();
+    var maxValue = Math.max(...flatGrid);
+    var minValue = Math.min(...flatGrid.filter(v => v > 0));
+
+    if (minValue === undefined || minValue === Infinity) {
+        minValue = 0;
+    }
+
+    // Draw each cell
+    for (var i = 0; i < resolution; i++) {
+        for (var j = 0; j < resolution; j++) {
+            var value = grid[i][j];
+
+            if (value > 0) {
+                ctx.fillStyle = getHeatColor(value, minValue, maxValue);
+                ctx.fillRect(j, resolution - 1 - i, 1, 1);
+            }
+        }
+    }
+
+    return canvas;
+}
+
+// Function to load and display heatmap
+function loadHeatmap() {
+    fetch('/api/heatmap')
+        .then(res => res.json())
+        .then(response => {
+            if (response.status !== 'ok') {
+                console.error('Failed to load heatmap:', response.message);
+                return;
+            }
+            console.log(response.data);
+
+            var data = response.data;
+            var bounds = data.bounds;
+
+            // Create canvas with heatmap
+            var canvas = drawHeatmapCanvas(data, bounds);
+
+            // Remove old heatmap layer if exists
+            if (heatmapLayer) {
+                map.removeLayer(heatmapLayer);
+            }
+
+            // Create image overlay from canvas
+            var imageBounds = [
+                [bounds.min_lat, bounds.min_lon],
+                [bounds.max_lat, bounds.max_lon]
+            ];
+
+            heatmapLayer = L.imageOverlay(canvas.toDataURL(), imageBounds, {
+                opacity: 0.7,
+                interactive: false,
+                pane: 'overlayPane',
+                zIndex: 400
+            }).addTo(map);
+
+            // Force the layer to be on top
+            if (heatmapLayer.getElement()) {
+                heatmapLayer.getElement().style.zIndex = 400;
+            }
+
+            console.log('Heatmap loaded successfully');
+        })
+        .catch(error => {
+            console.error('Error loading heatmap:', error);
+        });
+}
     // --- MENU TOGGLE ---
     function toggleMenu() {
         document.getElementById('menu').classList.toggle('open');
@@ -82,125 +223,97 @@
 
     // --- WYSYŁANIE DO BACKENDU - CZĘŚĆ 2: FINALIZACJA ---
     function sendAlertToBackend(latlng) {
-        alert(latlng)
-        // Zamień tymczasowe elementy na stałe
-        if (tempMarker) {
-            // Możesz zmienić styl markera na stały
-            tempMarker.setIcon(L.icon({
-                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                iconSize: [25, 41],
-                iconAnchor: [12, 41],
-                popupAnchor: [1, -34],
-                shadowSize: [41, 41]
-            }));
-            tempMarker.bindPopup("Alert - niebezpieczeństwo").openPopup();
-            tempMarker = null; // Nie usuwaj, tylko przestań śledzić
-        }
+    var userEmail = '{{ user_email }}';
+    if (!userEmail) {
+        alert("Musisz być zalogowany, aby dodać alert.");
+        return;
+    }
 
-        if (tempCircle) {
-            // Zmień styl okręgu na stały
-            tempCircle.setStyle({
-                color: 'red',
-                fillColor: '#f03',
-                fillOpacity: 0.3,
-                weight: 2
-            });
-            tempCircle = null; // Nie usuwaj, tylko przestań śledzić
-        }
-
-        // Wyślij do backendu
-        fetch("/api/reports", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                lat: latlng.lat,
-                lng: latlng.lng,
-                timestamp: new Date().toISOString()
-            })
+    fetch("/api/reports", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            lat: latlng.lat,
+            lng: latlng.lng
         })
-        .then(response => response.json())
-        .then(data => {
-            // if (data.status === "ok") {
-            //     // alert("Alert został pomyślnie dodany!");
-            // } else {
-            //     alert("Błąd podczas dodawania alertu: " + data.message);
-            // }
-        })
-        .catch(error => {
-            console.error("Error:", error);
-            // alert("Błąd połączenia z serwerem.");
-        });
-
-        selectedLocation = null;
-    }
-
-    // --- DODATKOWE FUNKCJE DO WYKORZYSTANIA WSPÓŁRZĘDNYCH ---
-
-    // Funkcja do pobrania wybranych współrzędnych (dla innych funkcji)
-    function getSelectedLocation() {
-        return selectedLocation;
-    }
-
-    // Funkcja do wyświetlenia szczegółów lokalizacji w menu
-    function showLocationDetails() {
-        // if (!selectedLocation) {
-        //     alert("Najpierw wybierz lokalizację na mapie!");
-        //     return;
-        // }
-
-        var details = `
-            Wybrana lokalizacja:
-            Szerokość: ${selectedLocation.lat.toFixed(6)}
-            Długość: ${selectedLocation.lng.toFixed(6)}
-
-            Co chcesz zrobić?
-        `;
-
-        var action = prompt(details + "\n1 - Wyślij alert\n2 - Pobierz współrzędne\n3 - Anuluj");
-
-        switch(action) {
-            case "1":
-                sendAlertToBackend(selectedLocation);
-                break;
-            case "2":
-                navigator.clipboard.writeText(`${selectedLocation.lat}, ${selectedLocation.lng}`);
-                // alert("Współrzędne skopiowane do schowka!");
-                break;
-            case "3":
-                // Anuluj - usuń tymczasowe elementy
-                if (tempMarker) map.removeLayer(tempMarker);
-                if (tempCircle) map.removeLayer(tempCircle);
-                tempMarker = null;
-                tempCircle = null;
-                selectedLocation = null;
-                break;
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
         }
-    }
-
-    // --- Pobranie istniejących alertów ---
-    fetch("/api/reports")
-        .then(res => res.json())
-        .then(data => {
-            data.forEach(r => {
-                var latlng = [r.lat, r.lng];
-                var marker = L.marker(latlng).addTo(map)
-                    .bindPopup("Alert - niebezpieczeństwo");
-
-                L.circle(latlng, {
-                    radius: 50,
-                    color: 'red',
-                    fillColor: '#f03',
-                    fillOpacity: 0.2
-                }).addTo(map);
-            });
-        });
-
-    // Zamknij menu gdy klikniesz poza nim
-    document.addEventListener('click', function(event) {
-        var menu = document.getElementById('menu');
-        var menuBtn = document.querySelector('.menu-btn');
-        if (!menu.contains(event.target) && !menuBtn.contains(event.target) && menu.classList.contains('open')) {
-            toggleMenu();
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === "success") {
+            loadAllAlerts(); // Przeładuj alerty
+        } else {
+            alert("Błąd podczas dodawania alertu: " + data.message);
         }
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        alert("Błąd połączenia z serwerem.");
     });
+
+    // Zamień tymczasowe elementy na stałe
+    if (tempMarker) {
+        tempMarker.setIcon(L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        }));
+        tempMarker.bindPopup("Alert - niebezpieczeństwo").openPopup();
+        tempMarker = null;
+    }
+
+    if (tempCircle) {
+        tempCircle.setStyle({
+            color: 'red',
+            fillColor: '#f03',
+            fillOpacity: 0.3,
+            weight: 2
+        });
+        tempCircle = null;
+    }
+
+    selectedLocation = null;
+}
+
+// --- PO ZALOGOWANIU ZAŁADUJ ALERTY ---
+document.addEventListener('DOMContentLoaded', function() {
+    loadAllAlerts();
+    loadHeatmap();
+});
+
+// Pozostały kod bez zmian...
+
+map.on('click', function(e) {
+    if (!alertMode) return;
+
+    var latlng = e.latlng;
+    selectedLocation = latlng;
+
+    if (tempMarker) {
+        map.removeLayer(tempMarker);
+    }
+    if (tempCircle) {
+        map.removeLayer(tempCircle);
+    }
+
+    tempMarker = L.marker(latlng).addTo(map)
+        .bindPopup("Wybrana lokalizacja")
+        .openPopup();
+
+    tempCircle = L.circle(latlng, {
+        radius: 50,
+        color: 'red',
+        fillColor: '#f03',
+        fillOpacity: 0.2
+    }).addTo(map);
+
+    alertMode = false;
+    sendAlertToBackend(latlng);
+});
