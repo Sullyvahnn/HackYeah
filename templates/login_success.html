@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <title>Email wysłany — DangerMap</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #f2f2f2;
+    }
+    .success-box {
+      width: 90%;
+      max-width: 400px;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+    h1 {
+      font-size: 22px;
+      margin-bottom: 20px;
+      color: #2a9d8f;
+    }
+    .back {
+      display: block;
+      margin-top: 15px;
+      font-size: 16px;
+      text-decoration: none;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="success-box">
+    <h1>✓ Sprawdź swoją skrzynkę email!</h1>
+    <p>Wysłaliśmy link logowania na adres: <strong>{{ email }}</strong></p>
+    <p>Kliknij w link w emailu, aby się zalogować.</p>
+    <p><small>Link jest ważny przez 15 minut.</small></p>
+
+    <a href="{{ url_for('index') }}" class="back">⬅ Wróć do mapy</a>
+  </div>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <title>Logowanie — DangerMap</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #f2f2f2;
+    }
+    .login-box {
+      width: 90%;
+      max-width: 400px;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+    h1 {
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+    input[type="email"] {
+      width: 100%;
+      padding: 14px;
+      font-size: 18px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      font-size: 18px;
+      background: #e63946;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #d62828;
+    }
+    .back {
+      display: block;
+      margin-top: 15px;
+      font-size: 16px;
+      text-decoration: none;
+      color: #333;
+    }
+    .flash-messages {
+      color: #d62828;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <h1>Zaloguj się</h1>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for message in messages %}
+            <p>{{ message }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('login') }}">
+      {{ form.hidden_tag() }}
+      <div>
+        {{ form.email.label }}<br>
+        {{ form.email(size=32, placeholder="twój@email.pl") }}<br>
+        {% for error in form.email.errors %}
+          <span style="color: red;">{{ error }}</span><br>
+        {% endfor %}
+      </div>
+      <div>
+        {{ form.submit() }}
+      </div>
+    </form>
+
+    <a href="{{ url_for('index') }}" class="back">⬅ Wróć do mapy</a>
+  </div>
+</body>
+</html>
