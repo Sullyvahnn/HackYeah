@@ -64,7 +64,7 @@ class DatabaseManager:
         
         conn.commit()
         conn.close()
-        print(f"Baza danych zainicjalizowana: {self.db_path}")
+        print(f"✅ Baza danych zainicjalizowana: {self.db_path}")
     
     def save_raw_article(self, url: str, title: str, raw_text: str, 
                         source: str = "unknown") -> Optional[int]:
@@ -85,11 +85,11 @@ class DatabaseManager:
             
             conn.commit()
             article_id = cursor.lastrowid
-            print(f"Zapisano artykuł ID={article_id}: {title[:50]}...")
+            print(f"✅ Zapisano artykuł ID={article_id}: {title[:50]}...")
             return article_id
             
         except sqlite3.IntegrityError:
-            print(f"Artykuł już istnieje: {url}")
+            print(f"⚠️ Artykuł już istnieje: {url}")
             return None
         finally:
             conn.close()
@@ -145,10 +145,10 @@ class DatabaseManager:
             ''', (raw_article_id,))
             
             conn.commit()
-            print(f"Przetworzono artykuł ID={raw_article_id}")
+            print(f"✅ Przetworzono artykuł ID={raw_article_id}")
             
         except Exception as e:
-            print(f"Błąd przetwarzania artykułu ID={raw_article_id}: {e}")
+            print(f"❌ Błąd przetwarzania artykułu ID={raw_article_id}: {e}")
             # Zwiększ licznik prób
             cursor.execute('''
                 UPDATE raw_articles 
@@ -235,11 +235,4 @@ class DatabaseManager:
 
 
 # Globalna instancja (singleton)
-DB_MANAGER: Optional['DatabaseManager'] = None 
-
-def initialize_db_manager(db_path: str):
-    """Leniwa inicjalizacja menedżera bazy danych."""
-    global DB_MANAGER
-    if DB_MANAGER is None:
-        DB_MANAGER = DatabaseManager(db_path=db_path)
-    return DB_MANAGER
+DB_MANAGER = DatabaseManager()

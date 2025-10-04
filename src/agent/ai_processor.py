@@ -7,7 +7,7 @@ class CrimeAIProcessor:
     """Procesor AI do ekstrakcji informacji o przestępstwach"""
     
     def __init__(self, model_name: str = "google/mt5-small"):
-        print(f" Ładuję model: {model_name}")
+        print(f"🤖 Ładuję model: {model_name}")
         
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
@@ -15,7 +15,7 @@ class CrimeAIProcessor:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model.to(self.device)
         
-        print(f"Model załadowany na: {self.device}")
+        print(f"✅ Model załadowany na: {self.device}")
     
     def generate_response(self, prompt: str, max_length: int = 128) -> str:
         """Generuje odpowiedź z modelu dla danego promptu"""
@@ -91,7 +91,7 @@ Słowa kluczowe:"""
     
     def process_article(self, article_text: str) -> Dict[str, str]:
         """Przetwarza cały artykuł przez 4 etapy ekstrakcji"""
-        print("Przetwarzam artykuł...")
+        print("🔄 Przetwarzam artykuł...")
         
         try:
             result = {
@@ -101,11 +101,11 @@ Słowa kluczowe:"""
                 'keywords': self.extract_keywords(article_text)
             }
             
-            print("Ekstrakcja zakończona!")
+            print("✅ Ekstrakcja zakończona!")
             return result
             
         except Exception as e:
-            print(f"Błąd przetwarzania: {e}")
+            print(f"❌ Błąd przetwarzania: {e}")
             return {
                 'crime_type': 'nieznany',
                 'location': 'nieznana',
@@ -138,7 +138,7 @@ Słowa kluczowe:"""
                 return (location_data.latitude, location_data.longitude)
             
         except Exception as e:
-            print(f"Błąd geokodowania: {e}")
+            print(f"⚠️ Błąd geokodowania: {e}")
         
         return None
 
@@ -159,29 +159,15 @@ class BatchProcessor:
             article_id = article['id']
             text = article['raw_text']
             
-            print(f"\n Przetwarzam artykuł ID={article_id}")
+            print(f"\n📄 Przetwarzam artykuł ID={article_id}")
             
-            # KROK 1: Ekstrakcja przez AI
             result = self.ai_processor.process_article(text)
             
-            # KROK 2: Geokodowanie (opcjonalne)
             location = result['location']
             coords = self.ai_processor.geocode_location(location)
             
             latitude = coords[0] if coords else None
             longitude = coords[1] if coords else None
             
-            # KROK 3: Zapis do bazy (POPRAWIONE!)
             DB_MANAGER.update_processed_article(
-                raw_article_id=article_id,
-                crime_type=result['crime_type'],
-                location=location,
-                summary=result['summary'],
-                keywords=result['keywords'],
-                latitude=latitude,
-                longitude=longitude
-            )
-            
-            processed_count += 1
-        
-        return processed_count
+                raw_article_id
