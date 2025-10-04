@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <title>Email wysłany — DangerMap</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="{{ url_for('static', filename='styles/login_success.css') }}">
+
+</head>
+<body>
+  <div class="success-box">
+    <h1>✓ Sprawdź swoją skrzynkę email!</h1>
+    <p>Wysłaliśmy link logowania na adres: <strong>{{ email }}</strong></p>
+    <p>Kliknij w link w emailu, aby się zalogować.</p>
+    <p><small>Link jest ważny przez 15 minut.</small></p>
+
+    <a href="{{ url_for('index') }}" class="back">⬅ Wróć do mapy</a>
+  </div>
+</body>
+</html>

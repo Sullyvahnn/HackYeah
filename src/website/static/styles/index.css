@@ -1,0 +1,89 @@
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    #map {
+      height: 100%;
+      width: 100%;
+      position: absolute;
+      top: 0; left: 0;
+      z-index: 1;
+    }
+
+    /* Hamburger */
+    .menu-btn {
+      position: absolute;
+      top: 15px;
+      left: 45px;
+      z-index: 1000;
+      background: white;
+      border: none;
+      font-size: 26px;
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 5px 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    /* Side menu */
+    .side-menu {
+      position: absolute;
+      top: 0;
+      left: -250px;
+      width: 250px;
+      height: 100%;
+      background: white;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.3);
+      z-index: 1100;
+      transition: left 0.3s ease;
+      padding: 20px;
+    }
+    .side-menu.open {
+      left: 0;
+    }
+    .side-menu h2 {
+      margin-top: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .side-menu a, .side-menu button {
+      display: block;
+      margin: 10px 0;
+      text-decoration: none;
+      color: #333;
+      font-size: 18px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      padding: 8px;
+      border-radius: 4px;
+      width: 100%;
+    }
+    .side-menu a:hover, .side-menu button:hover {
+      background: #a8a3a3;
+    }
+    .user-info {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 15px 0;
+    }

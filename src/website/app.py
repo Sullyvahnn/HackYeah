@@ -1,16 +1,16 @@
 import os
-import sqlite3
+
 import uuid
 import time
 import smtplib
 from email.message import EmailMessage
 from flask import Flask, render_template, render_template_string, request, redirect, url_for, session, flash
-from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField
-from wtforms.validators import DataRequired, Email
+
+
+from src.website.user_db.db import LoginForm, get_db
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret')
-DB_PATH = os.environ.get('DB_PATH', 'magiclink.db')
+
 
 SMTP_HOST = os.environ.get('SMTP_HOST', 'localhost')
 SMTP_PORT = int(os.environ.get('SMTP_PORT', 1025))
@@ -27,43 +27,7 @@ app.secret_key = SECRET_KEY
 
 
 # --- Formularz logowania ---
-class LoginForm(FlaskForm):
-    email = StringField('Email', validators=[DataRequired(), Email()])
-    submit = SubmitField('Wyślij link logowania')
 
-
-# --- DB helpers ---
-def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def init_db():
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute("""
-                CREATE TABLE IF NOT EXISTS tokens
-                (
-                    token
-                    TEXT
-                    PRIMARY
-                    KEY,
-                    email
-                    TEXT,
-                    created_at
-                    INTEGER,
-                    used
-                    INTEGER
-                    DEFAULT
-                    0
-                )
-                """)
-    conn.commit()
-    conn.close()
-
-
-init_db()
 
 
 # --- Email sender ---
