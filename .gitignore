@@ -1,0 +1,49 @@
+# Środowiska wirtualne
+venv/
+.venv/
+env/
+.env/
+env.bak/
+venv.bak/
+
+# Pliki z danymi wrażliwymi
+.env
+.env.*
+!.env.example
+
+# Pliki i katalogi specyficzne dla Pythona
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+/instance
+
+# Pliki związane z testowaniem
+.pytest_cache/
+.coverage
+htmlcov/
+nosetests.xml
+coverage.xml
+
+# Pliki specyficzne dla Flask
+instance/
+.webassets-cache
+
+# Pliki specyficzne dla PyCharm
+.idea/
+
+# Pliki specyficzne dla Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Pliki logów
+*.log
+
+# Pliki systemowe
+.DS_Store
+Thumbs.db
