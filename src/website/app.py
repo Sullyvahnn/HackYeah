@@ -3,7 +3,7 @@ from flask import Flask, render_template
 from src.website.auth.routes import auth_bp
 from src.website.api.routes import api_bp
 
-SECRET_KEY = "CHUJ"
+SECRET_KEY = "dummy_secret_key_for_development"
 
 def create_app():
     template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
