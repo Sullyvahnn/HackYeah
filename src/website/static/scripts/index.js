@@ -14,9 +14,6 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
 }).addTo(map);
 
-// =================================================================
-// KONTROLKA / PRZYCISK GEOLOKALIZACJI (Prawy Dolny Róg)
-// =================================================================
 
 var locationControl = L.control({position: 'bottomright'}); 
 
@@ -40,10 +37,6 @@ locationControl.onAdd = function (map) {
 };
 
 locationControl.addTo(map);
-
-// =================================================================
-// FUNKCJE GEOLOKALIZACJI
-// =================================================================
 
 function startBackgroundTracking() {
     if (!("geolocation" in navigator)) {
