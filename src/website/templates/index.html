@@ -10,6 +10,7 @@
 
   <!-- Your CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/index.css') }}">
+  <<!--     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"> -->
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
@@ -22,6 +23,7 @@
 
 </head>
 <body>
+<<!--     <script src="{{ url_for('static', filename='js/main.js') }}"></script> -->
   <div id="map"></div>
 
   <!-- Hamburger button -->
@@ -29,9 +31,7 @@
 
   <!-- Side menu -->
   <div class="side-menu" id="menu">
-    <h2>Menu
-      <button class="close-btn" onclick="toggleMenu()">×</button>
-    </h2>
+    <h2>Menu ThreatLens</h2>
 
     <button onclick="enableAlertMode()">Zgłoś alert</button>
 
@@ -45,10 +45,8 @@
       <a href="{{ url_for('login') }}">Zaloguj się</a>
     {% endif %}
 
-    <!-- Przycisk zamykania menu i powrotu do mapy -->
-    <button style="color: #d62828" onclick="closeMenuAndReturnToMap()">Zamknij menu</button>
+    <button class="close-btn" onclick="toggleMenu()" style="color: #d62828">Zamknij menu</button>
   </div>
-
 
 </body>
 </html>

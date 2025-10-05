@@ -4,38 +4,39 @@
   <meta charset="utf-8">
   <title>Logowanie — ThreatLens</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="{{ url_for('static', filename='styles/login.css') }}">
-
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/login.css') }}">
 </head>
 <body>
-  <div class="login-box">
-    <h1>Zaloguj się</h1>
+  <div class="login-container">
+    <div class="login-box">
+      <h1>Zaloguj się</h1>
 
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        <div class="flash-messages">
-          {% for message in messages %}
-            <p>{{ message }}</p>
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="flash-messages">
+            {% for message in messages %}
+              <p>{{ message }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('login') }}">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+          {{ form.email.label }}
+          {{ form.email(size=32, placeholder="twój@email.pl", class="input-field") }}
+          {% for error in form.email.errors %}
+            <span class="error">{{ error }}</span>
           {% endfor %}
         </div>
-      {% endif %}
-    {% endwith %}
+        <div class="form-group">
+          {{ form.submit(class="btn") }}
+        </div>
+      </form>
 
-    <form method="POST" action="{{ url_for('login') }}">
-      {{ form.hidden_tag() }}
-      <div>
-        {{ form.email.label }}<br>
-        {{ form.email(size=32, placeholder="twój@email.pl") }}<br>
-        {% for error in form.email.errors %}
-          <span style="color: red;">{{ error }}</span><br>
-        {% endfor %}
-      </div>
-      <div>
-        {{ form.submit() }}
-      </div>
-    </form>
-
-    <a href="{{ url_for('index') }}" class="back">⬅ Wróć do mapy</a>
+      <a href="{{ url_for('index') }}" class="back-link"> Wróć do mapy</a>
+    </div>
   </div>
 </body>
 </html>
