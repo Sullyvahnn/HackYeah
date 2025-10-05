@@ -5,9 +5,117 @@ var tempMarker = null;
 var tempCircle = null;
 var heatmapLayer = null;
 var userMarkers = [];
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-    }).addTo(map);
+var userLocationMarker = null;
+var userLocationCircle = null;
+var watchID = null;
+var userCurrentLatlng = null; // Przechowuje ostatnią znaną pozycję do centrowania
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+}).addTo(map);
+
+// =================================================================
+// KONTROLKA / PRZYCISK GEOLOKALIZACJI (Prawy Dolny Róg)
+// =================================================================
+
+var locationControl = L.control({position: 'bottomright'}); 
+
+locationControl.onAdd = function (map) {
+    var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom leaflet-control-locate');
+    container.innerHTML = '<a href="#" title="Centruj na mojej lokalizacji" role="button" aria-label="Centruj na mojej lokalizacji"><i id="location-btn-icon" class="fa fa-crosshairs"></i></a>';
+    
+    container.style.backgroundColor = 'white';
+    container.style.width = '30px';
+    container.style.height = '30px';
+    container.style.lineHeight = '30px';
+    container.style.textAlign = 'center';
+    container.style.cursor = 'pointer';
+
+    L.DomEvent.on(container, 'click', function(e) {
+        L.DomEvent.stopPropagation(e);
+        centerOnUserLocation(map);
+    });
+
+    return container;
+};
+
+locationControl.addTo(map);
+
+// =================================================================
+// FUNKCJE GEOLOKALIZACJI
+// =================================================================
+
+function startBackgroundTracking() {
+    if (!("geolocation" in navigator)) {
+        console.error("Geolocation API nie jest wspierane.");
+        return;
+    }
+
+    var successCallback = function(position) {
+        var lat = position.coords.latitude;
+        var lng = position.coords.longitude;
+        var accuracy = position.coords.accuracy;
+        var latlng = L.latLng(lat, lng);
+        
+        userCurrentLatlng = latlng; 
+
+        var customIcon = L.divIcon({
+            className: 'user-location-icon',
+            html: '<div style="background-color: #4A89F3; width: 15px; height: 15px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.5);"></div>',
+            iconSize: [19, 19], 
+            iconAnchor: [10, 10]
+        });
+
+        if (userLocationMarker === null) {
+            userLocationMarker = L.marker(latlng, { icon: customIcon }).addTo(map);
+            userLocationCircle = L.circle(latlng, { 
+                radius: accuracy, color: '#1a0dab', fillColor: '#1a0dab', fillOpacity: 0.15, weight: 1
+            }).addTo(map);
+            
+            // Wyśrodkuj przy pierwszym udanym starcie
+            map.setView(latlng, 16); 
+        } else {
+            userLocationMarker.setLatLng(latlng);
+            userLocationCircle.setLatLng(latlng).setRadius(accuracy);
+        }
+    };
+    
+    var errorCallback = function(error) {
+        console.warn("Błąd geolokalizacji:", error.message);
+    };
+    
+    watchID = navigator.geolocation.watchPosition(
+        successCallback,
+        errorCallback,
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+}
+
+function centerOnUserLocation(mapInstance) {
+    var btnIcon = document.getElementById('location-btn-icon');
+    var btnContainer = btnIcon.parentNode.parentNode;
+    
+    if (userCurrentLatlng) {
+        mapInstance.setView(userCurrentLatlng, 16); 
+        
+        btnIcon.classList.add('fa-spin');
+        btnContainer.style.backgroundColor = '#dff0d8';
+
+        setTimeout(() => {
+            btnIcon.classList.remove('fa-spin');
+            btnContainer.style.backgroundColor = 'white';
+        }, 1500); 
+
+    } else {
+        alert("Oczekiwanie na ustalenie lokalizacji. Spróbuj ponownie za chwilę.");
+        startBackgroundTracking(); 
+    }
+}
+
+// =================================================================
+// ORYGINALNE FUNKCJE
+// =================================================================
+
 function loadAllAlerts() {
     fetch("/api/reports")
         .then(res => {
@@ -15,16 +123,13 @@ function loadAllAlerts() {
             return res.json();
         })
         .then(data => {
-            // Usuń stare markery
             userMarkers.forEach(item => {
                 map.removeLayer(item.marker);
                 map.removeLayer(item.circle);
             });
             userMarkers = [];
 
-            // Dodaj nowe markery
             data.forEach(alert => {
-                // Use x and y from the API
                 if (alert.x != null && alert.y != null) {
                     var latlng = [alert.x, alert.y];
 
@@ -43,9 +148,7 @@ function loadAllAlerts() {
                     }).addTo(map);
 
                     userMarkers.push({
-                        marker: marker,
-                        circle: circle,
-                        id: alert.id
+                        marker: marker, circle: circle, id: alert.id
                     });
                 }
             });
@@ -56,18 +159,18 @@ function loadAllAlerts() {
 }
 
 function getHeatColor(value, min, max) {
-    const t = (normalized - 0.75) * 4;
     var normalized = (value - min) / (max - min);
+    const t = (normalized - 0.75) * 4;
 
     if (normalized < 0.25) {
         var alpha = normalized * 4;
-        return `rgba(255, 255, 0, ${alpha * 0.8})`; // stronger transparency
+        return `rgba(255, 255, 0, ${alpha * 0.8})`;
     } else if (normalized < 0.5) {
         return `rgba(255, ${255 - t * 128}, 0, ${0.7 + t * 0.3})`;
     } else if (normalized < 0.75) {
         return `rgba(255, ${127 - t * 127}, 0, ${0.9})`;
     } else {
-        return `rgba(${255 - t * 55}, 0, 0, 1)`; // full opacity
+        return `rgba(${255 - t * 55}, 0, 0, 1)`;
     }
 }
 
@@ -80,7 +183,6 @@ function drawHeatmapCanvas(heatmapData, bounds) {
     var ctx = canvas.getContext('2d');
     var grid = heatmapData.heatmap;
 
-    // Find min and max values for color scaling
     var flatGrid = grid.flat();
     var maxValue = Math.max(...flatGrid);
     var minValue = Math.min(...flatGrid.filter(v => v > 0));
@@ -89,7 +191,6 @@ function drawHeatmapCanvas(heatmapData, bounds) {
         minValue = 0;
     }
 
-    // Draw each cell
     for (var i = 0; i < resolution; i++) {
         for (var j = 0; j < resolution; j++) {
             var value = grid[i][j];
@@ -104,7 +205,6 @@ function drawHeatmapCanvas(heatmapData, bounds) {
     return canvas;
 }
 
-// Function to load and display heatmap
 function loadHeatmap() {
     fetch('/api/heatmap')
         .then(res => res.json())
@@ -113,20 +213,16 @@ function loadHeatmap() {
                 console.error('Failed to load heatmap:', response.message);
                 return;
             }
-            console.log(response.data);
 
             var data = response.data;
             var bounds = data.bounds;
 
-            // Create canvas with heatmap
             var canvas = drawHeatmapCanvas(data, bounds);
 
-            // Remove old heatmap layer if exists
             if (heatmapLayer) {
                 map.removeLayer(heatmapLayer);
             }
 
-            // Create image overlay from canvas
             var imageBounds = [
                 [bounds.min_lat, bounds.min_lon],
                 [bounds.max_lat, bounds.max_lon]
@@ -139,7 +235,6 @@ function loadHeatmap() {
                 zIndex: 400
             }).addTo(map);
 
-            // Force the layer to be on top
             if (heatmapLayer.getElement()) {
                 heatmapLayer.getElement().style.zIndex = 400;
             }
@@ -150,79 +245,37 @@ function loadHeatmap() {
             console.error('Error loading heatmap:', error);
         });
 }
-    // --- MENU TOGGLE ---
-    function toggleMenu() {
-        document.getElementById('menu').classList.toggle('open');
+
+function toggleMenu() {
+    document.getElementById('menu').classList.toggle('open');
+}
+
+function closeMenuAndReturnToMap() {
+    document.getElementById('menu').classList.remove('open');
+    map.getContainer().focus();
+}
+
+function enableAlertMode() {
+    if (!'{{user_email}}') {
+        return;
     }
 
-    // --- ZAMKNIJ MENU I WRÓĆ DO MAPY ---
-    function closeMenuAndReturnToMap() {
-        document.getElementById('menu').classList.remove('open');
-        map.getContainer().focus();
+    alertMode = true;
+    selectedLocation = null;
+
+    if (tempMarker) {
+        map.removeLayer(tempMarker);
+        tempMarker = null;
+    }
+    if (tempCircle) {
+        map.removeLayer(tempCircle);
+        tempCircle = null;
     }
 
-    // --- ALERT MODE - CZĘŚĆ 1: WYBÓR LOKALIZACJI ---
-    function enableAlertMode() {
-      // alert('{{user_email}}')
-        if (!'{{user_email}}') {
-            // alert("Musisz być zalogowany, aby dodać alert.");
-            return;
-        }
+    toggleMenu();
+}
 
-        alertMode = true;
-        selectedLocation = null; // Resetuj poprzedni wybór
-
-        // Usuń poprzednie tymczasowe elementy
-        if (tempMarker) {
-            map.removeLayer(tempMarker);
-            tempMarker = null;
-        }
-        if (tempCircle) {
-            map.removeLayer(tempCircle);
-            tempCircle = null;
-        }
-
-        toggleMenu();
-        // alert("Kliknij na mapie, aby wybrać lokalizację alertu.");
-    }
-
-    // --- OBSŁUGA KLIKNIĘCIA NA MAPIE - CZĘŚĆ 1: ZAZNACZANIE ---
-    map.on('click', function(e) {
-        if (!alertMode) return;
-
-        var latlng = e.latlng;
-        selectedLocation = latlng; // Zapisz współrzędne do późniejszego użycia
-
-        // Usuń poprzednie tymczasowe elementy
-        if (tempMarker) {
-            map.removeLayer(tempMarker);
-        }
-        if (tempCircle) {
-            map.removeLayer(tempCircle);
-        }
-
-        // Dodaj tymczasowy marker
-        tempMarker = L.marker(latlng).addTo(map)
-            .bindPopup("Wybrana lokalizacja<br>Kontynuuj w menu")
-            .openPopup();
-
-        // Dodaj tymczasowy okrąg
-        tempCircle = L.circle(latlng, {
-            radius: 50,
-            color: 'red',
-            fillColor: '#f03',
-            fillOpacity: 0.2
-        }).addTo(map);
-
-        // Wyłącz tryb alertu po wybraniu lokalizacji
-        alertMode = false;
-
-        // Pokaż potwierdzenie i opcje dalszego działania
-        sendAlertToBackend(latlng);
-    });
-
-    // --- WYSYŁANIE DO BACKENDU - CZĘŚĆ 2: FINALIZACJA ---
-    function sendAlertToBackend(latlng) {
+function sendAlertToBackend(latlng) {
     var userEmail = '{{ user_email }}';
     if (!userEmail) {
         alert("Musisz być zalogowany, aby dodać alert.");
@@ -245,7 +298,7 @@ function loadHeatmap() {
     })
     .then(data => {
         if (data.status === "success") {
-            loadAllAlerts(); // Przeładuj alerty
+            loadAllAlerts();
         } else {
             alert("Błąd podczas dodawania alertu: " + data.message);
         }
@@ -255,7 +308,6 @@ function loadHeatmap() {
         alert("Błąd połączenia z serwerem.");
     });
 
-    // Zamień tymczasowe elementy na stałe
     if (tempMarker) {
         tempMarker.setIcon(L.icon({
             iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
@@ -281,14 +333,6 @@ function loadHeatmap() {
 
     selectedLocation = null;
 }
-
-// --- PO ZALOGOWANIU ZAŁADUJ ALERTY ---
-document.addEventListener('DOMContentLoaded', function() {
-    loadAllAlerts();
-    loadHeatmap();
-});
-
-// Pozostały kod bez zmian...
 
 map.on('click', function(e) {
     if (!alertMode) return;
@@ -316,4 +360,11 @@ map.on('click', function(e) {
 
     alertMode = false;
     sendAlertToBackend(latlng);
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadAllAlerts();
+    loadHeatmap();
+    // Rozpocznij śledzenie w tle
+    startBackgroundTracking(); 
 });

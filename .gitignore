@@ -47,3 +47,6 @@ instance/
 # Pliki systemowe
 .DS_Store
 Thumbs.db
+src/data/ollama_cache.json
+src/database/data.db
+src/database/data.db
