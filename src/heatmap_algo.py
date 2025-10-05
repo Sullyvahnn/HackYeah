@@ -13,9 +13,9 @@ def convert_point(x, y):
     return lat, lon
 
 # Zmieniona sygnatura: używamy radius_degrees zamiast radius_meters
-def create_heatmap(resolution=100, radius_degrees=0.005, normalize=True): 
+def create_heatmap(resolution=100, radius_degrees=0.01, normalize=True):
     # Uwaga: 0.005 stopnia to mniej więcej 550 metrów
-    
+
     # 1. Pobranie i przygotowanie danych
     data = view_all()
     if not data:
@@ -62,43 +62,45 @@ def create_heatmap(resolution=100, radius_degrees=0.005, normalize=True):
     lat_step = (max_lat - min_lat) / resolution
     lon_step = (max_lon - min_lon) / resolution
 
-    delta_i = math.ceil(radius_degrees / lat_step) 
-    delta_j = math.ceil(radius_degrees / lon_step) 
+    delta_i = math.ceil(radius_degrees / lat_step)
+    delta_j = math.ceil(radius_degrees / lon_step)
 
     for point in points:
-        
+
         i_center = int((point['lat'] - min_lat) / lat_step)
         j_center = int((point['lon'] - min_lon) / lon_step)
-        
+
         i_min = max(0, i_center - delta_i)
         i_max = min(resolution, i_center + delta_i + 1)
         j_min = max(0, j_center - delta_j)
         j_max = min(resolution, j_center + delta_j + 1)
-        
+
         for i in range(i_min, i_max):
             for j in range(j_min, j_max):
                 # Środek komórki siatki
                 grid_lat = min_lat + (i + 0.5) * lat_step
                 grid_lon = min_lon + (j + 0.5) * lon_step
 
-                distance_degrees = math.sqrt((point["lat"] - grid_lat)**2 + (point["lon"] - grid_lon)**2)
+                distance_degrees = math.sqrt((point["lat"] - grid_lat) ** 2 + (point["lon"] - grid_lon) ** 2)
 
                 # Poprawny warunek zasięgu (stopnie vs. stopnie)
                 if distance_degrees <= radius_degrees:
                     # Funkcja jądra (prosty kernel: stała wartość w promieniu)
-                    heatmap[i, j] += point['trust_scaled'] * 10 
+                    heatmap[i, j] += abs(point['trust_scaled']) * 10
 
     grid_info = {
         'resolution': resolution,
-        'radius_degrees': radius_degrees, # Nowa jednostka zasięgu
+        'radius_degrees': radius_degrees,  # Nowa jednostka zasięgu
         'lat_step': lat_step,
         'lon_step': lon_step,
         'num_points': len(points),
         'normalized': normalize,
-        'delta_i': delta_i, 
+        'delta_i': delta_i,
         'delta_j': delta_j
     }
-    
+    bounds['min_lat'], bounds['min_lon'] = convert_point(min_lat, min_lon)
+    bounds['max_lat'], bounds['max_lon'] = convert_point(max_lat, max_lon)
+
     return heatmap, bounds, grid_info
 
 
@@ -189,3 +191,7 @@ def plot_heatmap(heatmap, bounds, grid_info, title="Trust Heatmap",
         plt.savefig(save_path)
     
     plt.show()
+
+if __name__ == '__main__':
+    heatmap, bounds, grid_info = create_heatmap(radius_degrees=500.0, resolution=100)
+    plot_heatmap(heatmap, bounds, grid_info)

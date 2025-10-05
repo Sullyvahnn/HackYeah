@@ -156,14 +156,14 @@ function getHeatColor(value, min, max) {
     const t = (normalized - 0.75) * 4;
 
     if (normalized < 0.25) {
-        var alpha = normalized * 4;
-        return `rgba(255, 255, 0, ${alpha * 0.8})`;
+        var alpha = normalized * 8;
+        return `rgba(200, 150, 255, ${alpha * 0.8})`; // light purple
     } else if (normalized < 0.5) {
-        return `rgba(255, ${255 - t * 128}, 0, ${0.7 + t * 0.3})`;
+        return `rgba(180, ${150 - t * 50}, 255, ${0.7 + t * 0.3})`; // medium purple
     } else if (normalized < 0.75) {
-        return `rgba(255, ${127 - t * 127}, 0, ${0.9})`;
+        return `rgba(150, ${100 - t * 50}, 255, 0.9)`; // darker purple
     } else {
-        return `rgba(${255 - t * 55}, 0, 0, 1)`;
+        return `rgba(${120 - t * 40}, 0, 180, 1)`; // deep violet
     }
 }
 
@@ -359,5 +359,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAllAlerts();
     loadHeatmap();
     // Rozpocznij śledzenie w tle
-    startBackgroundTracking(); 
+    startBackgroundTracking();
+    fetch('/api/heatmap').then(r => r.json()).then(console.log);
 });

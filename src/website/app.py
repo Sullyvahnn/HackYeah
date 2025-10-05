@@ -174,7 +174,7 @@ def get_heatmap():
         # Generate heatmap with specified parameters
         heatmap, bounds, grid_info = create_heatmap(
             resolution=100,
-            radius_meters=100.0,
+            radius_degrees=500.0,
             normalize=True
         )
 
