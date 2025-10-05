@@ -1,6 +1,3 @@
-Jasne! Oto angielska wersja Twojego README, dopasowana pod hackathon i kategorię **Travel / Safety**:
-
----
 
 # ThreatLens 🌍🚨
 
@@ -57,3 +54,4 @@ The goal of ThreatLens is to support travelers, families, and locals in moving t
 * **AI/ML:** Groq and Gemini API, OLlama local
 * **Geolocation:** HTML5 Geolocation & geofencing
 * **Scraper:** Automated collection of data from KMZB and local news sources
+
