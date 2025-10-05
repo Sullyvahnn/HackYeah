@@ -115,28 +115,7 @@ function toggleMenu() {
     document.getElementById('menu').classList.toggle('open');
 }
 
-function enableAlertMode() {
-    if (!'{{user_email}}') {
-        return;
-    }
-
-    alertMode = true;
-    selectedLocation = null;
-
-    if (tempMarker) {
-        map.removeLayer(tempMarker);
-        tempMarker = null;
-    }
-    if (tempCircle) {
-        map.removeLayer(tempCircle);
-        tempCircle = null;
-    }
-
-    toggleMenu();
-}
-
 map.on('click', function(e) {
-    if (!alertMode) return;
 
     var latlng = e.latlng;
     selectedLocation = latlng;
@@ -147,17 +126,6 @@ map.on('click', function(e) {
     if (tempCircle) {
         map.removeLayer(tempCircle);
     }
-
-    tempMarker = L.marker(latlng).addTo(map)
-        .bindPopup("Wybrana lokalizacja")
-        .openPopup();
-
-    tempCircle = L.circle(latlng, {
-        radius: 50,
-        color: 'red',
-        fillColor: '#f03',
-        fillOpacity: 0.2
-    }).addTo(map);
 
     alertMode = false;
     sendAlertToBackend(latlng);

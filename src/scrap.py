@@ -147,10 +147,9 @@ def insert_crime_data(data):
             add_row(
                 date=date,
                 label=label,
-                address=None,
-                city=None,
                 coordinates=coordinates,
-                trust=trust
+                trust=trust,
+                user=None
             )
         else:
             print(f"Crime already exists: {date}, {label}, {coordinates}")

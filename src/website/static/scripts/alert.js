@@ -41,9 +41,8 @@ function loadAllAlerts() {
 }
 
 function sendAlertToBackend(latlng) {
-    var userEmail = '{{ user_email }}';
-    if (!userEmail) {
-        alert("Musisz być zalogowany, aby dodać alert.");
+    if (!latlng || latlng.lat == null || latlng.lng == null) {
+        console.error("Invalid coordinates");
         return;
     }
 
@@ -51,8 +50,8 @@ function sendAlertToBackend(latlng) {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
-            lat: latlng.lat,
-            lng: latlng.lng
+            date: new Date().toISOString(),
+            coordinates: [latlng.lat, latlng.lng]
         })
     })
     .then(response => {
@@ -63,38 +62,13 @@ function sendAlertToBackend(latlng) {
     })
     .then(data => {
         if (data.status === "success") {
-            loadAllAlerts();
+            loadAllAlerts();   // refresh alerts
+            loadHeatmap();     // refresh heatmap
         } else {
             alert("Błąd podczas dodawania alertu: " + data.message);
         }
     })
     .catch(error => {
         console.error("Error:", error);
-        alert("Błąd połączenia z serwerem.");
     });
-
-    if (tempMarker) {
-        tempMarker.setIcon(L.icon({
-            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowSize: [41, 41]
-        }));
-        tempMarker.bindPopup("Alert - niebezpieczeństwo").openPopup();
-        tempMarker = null;
-    }
-
-    if (tempCircle) {
-        tempCircle.setStyle({
-            color: 'red',
-            fillColor: '#f03',
-            fillOpacity: 0.3,
-            weight: 2
-        });
-        tempCircle = null;
-    }
-
-    selectedLocation = null;
 }

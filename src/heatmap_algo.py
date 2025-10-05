@@ -9,7 +9,10 @@ transformer = Transformer.from_crs("EPSG:2180", "EPSG:4326", always_xy=True)
 def convert_point(x, y):
     """Konwertuje współrzędne z EPSG:2180 na (lat, lon) w EPSG:4326."""
     # pyproj returns (lon, lat) when always_xy=True, we swap to (lat, lon)
-    lon, lat = transformer.transform(x, y)
+    if x > 100:
+        lon, lat = transformer.transform(x, y)
+    else:
+        lon, lat = (x, y)
     return lat, lon
 
 # Zmieniona sygnatura: używamy radius_degrees zamiast radius_meters
@@ -78,8 +81,8 @@ def create_heatmap(resolution=100, radius_degrees=0.01, normalize=True):
         for i in range(i_min, i_max):
             for j in range(j_min, j_max):
                 # Środek komórki siatki
-                grid_lat = min_lat + (i + 0.5) * lat_step
-                grid_lon = min_lon + (j + 0.5) * lon_step
+                grid_lat = min_lat + (i) * lat_step
+                grid_lon = min_lon + (j) * lon_step
 
                 distance_degrees = math.sqrt((point["lat"] - grid_lat) ** 2 + (point["lon"] - grid_lon) ** 2)
 
