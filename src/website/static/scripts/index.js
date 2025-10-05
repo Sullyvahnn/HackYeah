@@ -45,33 +45,36 @@ function startBackgroundTracking() {
     }
 
     var successCallback = function(position) {
-        var lat = position.coords.latitude;
-        var lng = position.coords.longitude;
-        var accuracy = position.coords.accuracy;
-        var latlng = L.latLng(lat, lng);
-        
-        userCurrentLatlng = latlng; 
+    var lat = position.coords.latitude;
+    var lng = position.coords.longitude;
+    var accuracy = position.coords.accuracy;
+    var latlng = L.latLng(lat, lng);
+    
+    userCurrentLatlng = latlng;
+    
+    // DODAJ TO - sprawdzanie zagrożenia
+    if (typeof checkDangerAtLocation === 'function') {
+        checkDangerAtLocation(lat, lng);
+    }
+    
+    var customIcon = L.divIcon({
+        className: 'user-location-icon',
+        html: '<div style="background-color: #4A89F3; width: 15px; height: 15px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.5);"></div>',
+        iconSize: [19, 19], 
+        iconAnchor: [10, 10]
+    });
 
-        var customIcon = L.divIcon({
-            className: 'user-location-icon',
-            html: '<div style="background-color: #4A89F3; width: 15px; height: 15px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.5);"></div>',
-            iconSize: [19, 19], 
-            iconAnchor: [10, 10]
-        });
-
-        if (userLocationMarker === null) {
-            userLocationMarker = L.marker(latlng, { icon: customIcon }).addTo(map);
-            userLocationCircle = L.circle(latlng, { 
-                radius: accuracy, color: '#1a0dab', fillColor: '#1a0dab', fillOpacity: 0.15, weight: 1
-            }).addTo(map);
-            
-            // Wyśrodkuj przy pierwszym udanym starcie
-            map.setView(latlng, 16); 
-        } else {
-            userLocationMarker.setLatLng(latlng);
-            userLocationCircle.setLatLng(latlng).setRadius(accuracy);
-        }
-    };
+    if (userLocationMarker === null) {
+        userLocationMarker = L.marker(latlng, { icon: customIcon }).addTo(map);
+        userLocationCircle = L.circle(latlng, { 
+            radius: accuracy, color: '#1a0dab', fillColor: '#1a0dab', fillOpacity: 0.15, weight: 1
+        }).addTo(map);
+        map.setView(latlng, 16);
+    } else {
+        userLocationMarker.setLatLng(latlng);
+        userLocationCircle.setLatLng(latlng).setRadius(accuracy);
+    }
+};
     
     var errorCallback = function(error) {
         console.warn("Błąd geolokalizacji:", error.message);
