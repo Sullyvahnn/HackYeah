@@ -1,31 +1,230 @@
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: #f2f2f2;
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: linear-gradient(135deg, #065f46, #15803d);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: #333;
+}
+
+.container {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.2);
+    padding: 50px 40px;
+    max-width: 580px;
+    width: 100%;
+    text-align: center;
+    animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
     }
-    .success-box {
-      width: 90%;
-      max-width: 400px;
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      text-align: center;
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
-    h1 {
+    }
+
+.icon-container {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 25px;
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3);
+}
+
+.icon {
+    font-size: 48px;
+    color: white;
+    font-weight: bold;
+}
+
+h1 {
+    color: #1a2a6c;
+    font-size: 32px;
+    margin-bottom: 16px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.subtitle {
+    color: #555;
+    font-size: 18px;
+    margin-bottom: 30px;
+    line-height: 1.5;
+}
+
+.email-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    margin: 30px 0;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+    border: 1px solid #eaeaea;
+    text-align: center;
+}
+
+.email-label {
+    display: block;
+    color: #666;
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+.email-address {
       font-size: 22px;
-      margin-bottom: 20px;
-      color: #2a9d8f;
+      font-weight: 600;
+      color: #1a2a6c;
+      word-break: break-all;
+}
+
+    .info-box {
+      background: #f0f7ff;
+      border-radius: 16px;
+      padding: 24px;
+      margin: 30px 0;
+      text-align: left;
+      border-left: 4px solid #4A90E2;
     }
-    .back {
-      display: block;
-      margin-top: 15px;
+
+    .info-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1a2a6c;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+    }
+
+    .info-title:before {
+      margin-right: 10px;
+      font-size: 20px;
+    }
+
+    .info-list {
+      list-style: none;
+    }
+
+    .info-list li {
+      margin-bottom: 12px;
+      padding-left: 30px;
+      position: relative;
+      line-height: 1.5;
+    }
+
+    .info-list li:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #4CAF50;
+      font-weight: bold;
       font-size: 16px;
+      background: rgba(76, 175, 80, 0.1);
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1a2a6c, #4A90E2);
+      color: white;
       text-decoration: none;
-      color: #333;
+      padding: 16px 32px;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 17px;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 20px rgba(26, 42, 108, 0.3);
+      margin-top: 10px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-back:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 25px rgba(26, 42, 108, 0.4);
+    }
+
+    .btn-back:active {
+      transform: translateY(-1px);
+    }
+
+    .btn-icon {
+      margin-right: 10px;
+      font-size: 20px;
+    }
+
+    .footer-text {
+      margin-top: 30px;
+      color: #777;
+      font-size: 14px;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 40px 25px;
+        border-radius: 20px;
+      }
+
+      h1 {
+        font-size: 26px;
+      }
+
+      .subtitle {
+        font-size: 16px;
+      }
+
+      .email-card {
+        padding: 20px;
+      }
+
+      .email-address {
+        font-size: 19px;
+      }
+
+      .info-box {
+        padding: 20px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 30px 20px;
+      }
+
+      .icon-container {
+        width: 80px;
+        height: 80px;
+      }
+
+      .icon {
+        font-size: 38px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
     }

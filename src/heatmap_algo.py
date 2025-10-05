@@ -4,33 +4,79 @@ from src.database.db import view_all
 import math
 from pyproj import Transformer
 
+# Transformer do konwersji EPSG:2180 (PUWG 1992) -> EPSG:4326 (WGS84)
 transformer = Transformer.from_crs("EPSG:2180", "EPSG:4326", always_xy=True)
 
 def convert_point(x, y):
-    """Konwertuje współrzędne z EPSG:2180 na (lat, lon) w EPSG:4326."""
-    # pyproj returns (lon, lat) when always_xy=True, we swap to (lat, lon)
-    if x > 100:
+    """
+    Konwertuje współrzędne z EPSG:2180 na (lat, lon) w EPSG:4326.
+    Zakłada, że wartości > 10000 to współrzędne w PUWG 1992.
+    """
+    # PUWG 1992 ma wartości rzędu setek tysięcy
+    if x > 10000 and y > 10000:
         lon, lat = transformer.transform(x, y)
+        return lat, lon
     else:
-        lon, lat = (x, y)
-    return lat, lon
+        # Już w formacie lat, lon
+        return x, y
 
-# Zmieniona sygnatura: używamy radius_degrees zamiast radius_meters
-def create_heatmap(resolution=100, radius_degrees=0.01, normalize=True):
-    # Uwaga: 0.005 stopnia to mniej więcej 550 metrów
+def degrees_to_meters_approx(lat, degrees):
+    """
+    Przybliżona konwersja stopni na metry dla danej szerokości geograficznej.
+    1 stopień szerokości ≈ 111 km
+    1 stopień długości zależy od szerokości: 111 km * cos(lat)
+    """
+    meters_per_degree_lat = 111000  # ~111 km
+    meters_per_degree_lon = 111000 * math.cos(math.radians(lat))
+    return meters_per_degree_lat, meters_per_degree_lon
 
+def meters_to_degrees(lat, meters):
+    """Konwertuje metry na stopnie dla danej szerokości geograficznej."""
+    meters_per_degree_lat = 111000
+    meters_per_degree_lon = 111000 * math.cos(math.radians(lat))
+    
+    degrees_lat = meters / meters_per_degree_lat
+    degrees_lon = meters / meters_per_degree_lon
+    
+    return degrees_lat, degrees_lon
+
+def create_heatmap(resolution=100, radius_meters=500, normalize=True):
+    """
+    Tworzy heatmapę na podstawie danych z bazy.
+    
+    Args:
+        resolution: Rozdzielczość siatki (NxN)
+        radius_meters: Promień wpływu punktu w metrach
+        normalize: Czy normalizować wartości trust
+    """
     # 1. Pobranie i przygotowanie danych
     data = view_all()
+    print(f"[HEATMAP] Retrieved {len(data) if data else 0} rows from database")
+    
     if not data:
+        print("[HEATMAP] No data returned from view_all()")
         return None, None, None
 
-    points = []
-    for row in data:
-        if row['coordinates'] and row['trust'] is not None:
-            lat, lon = row['coordinates']
-            points.append({'lat': lat, 'lon': lon, 'trust': row['trust']})
+    # Debug: pokaż przykładowy rekord
+    if data:
+        print(f"[HEATMAP] Sample record keys: {list(data[0].keys())}")
+        print(f"[HEATMAP] Sample record: {data[0]}")
 
+    points = []
+    skipped = 0
+    for row in data:
+        if row.get('coordinates') and row.get('trust') is not None:
+            # Konwersja współrzędnych jeśli potrzeba
+            x, y = row['coordinates']
+            lat, lon = convert_point(x, y)
+            points.append({'lat': lat, 'lon': lon, 'trust': row['trust']})
+        else:
+            skipped += 1
+
+    print(f"[HEATMAP] Processed {len(points)} valid points, skipped {skipped}")
+    
     if not points:
+        print("[HEATMAP] No valid points after filtering")
         return None, None, None
 
     lats = [p['lat'] for p in points]
@@ -38,8 +84,10 @@ def create_heatmap(resolution=100, radius_degrees=0.01, normalize=True):
     min_lat, max_lat = min(lats), max(lats)
     min_lon, max_lon = min(lons), max(lons)
 
-    lat_padding = 0.001
-    lon_padding = 0.001
+    # Padding (około 100m)
+    center_lat = (min_lat + max_lat) / 2
+    lat_padding, lon_padding = meters_to_degrees(center_lat, 100)
+    
     min_lat -= lat_padding
     max_lat += lat_padding
     min_lon -= lon_padding
@@ -50,6 +98,7 @@ def create_heatmap(resolution=100, radius_degrees=0.01, normalize=True):
         'min_lon': min_lon, 'max_lon': max_lon
     }
 
+    # Normalizacja wartości trust
     trust_values = [p['trust'] for p in points]
     if normalize and trust_values:
         min_trust = min(trust_values)
@@ -61,18 +110,29 @@ def create_heatmap(resolution=100, radius_degrees=0.01, normalize=True):
         for p in points:
             p['trust_scaled'] = p['trust']
 
+    # Inicjalizacja siatki heatmapy
     heatmap = np.zeros((resolution, resolution))
     lat_step = (max_lat - min_lat) / resolution
     lon_step = (max_lon - min_lon) / resolution
 
-    delta_i = math.ceil(radius_degrees / lat_step)
-    delta_j = math.ceil(radius_degrees / lon_step)
+    # Konwersja promienia z metrów na stopnie (dla centrum obszaru)
+    center_lat = (min_lat + max_lat) / 2
+    radius_deg_lat, radius_deg_lon = meters_to_degrees(center_lat, radius_meters)
+    
+    # Używamy średniego promienia w stopniach
+    radius_degrees = (radius_deg_lat + radius_deg_lon) / 2
 
+    # Obliczanie zakresu wpływu w komórkach siatki
+    delta_i = math.ceil(radius_deg_lat / lat_step)
+    delta_j = math.ceil(radius_deg_lon / lon_step)
+
+    # Generowanie heatmapy
     for point in points:
-
+        # Znajdź komórkę środkową dla punktu
         i_center = int((point['lat'] - min_lat) / lat_step)
         j_center = int((point['lon'] - min_lon) / lon_step)
 
+        # Zakres wpływu (z optymalizacją)
         i_min = max(0, i_center - delta_i)
         i_max = min(resolution, i_center + delta_i + 1)
         j_min = max(0, j_center - delta_j)
@@ -81,19 +141,26 @@ def create_heatmap(resolution=100, radius_degrees=0.01, normalize=True):
         for i in range(i_min, i_max):
             for j in range(j_min, j_max):
                 # Środek komórki siatki
-                grid_lat = min_lat + (i) * lat_step
-                grid_lon = min_lon + (j) * lon_step
+                grid_lat = min_lat + (i + 0.5) * lat_step
+                grid_lon = min_lon + (j + 0.5) * lon_step
 
-                distance_degrees = math.sqrt((point["lat"] - grid_lat) ** 2 + (point["lon"] - grid_lon) ** 2)
+                # Oblicz odległość w stopniach
+                distance_degrees = math.sqrt(
+                    ((point['lat'] - grid_lat) / radius_deg_lat) ** 2 + 
+                    ((point['lon'] - grid_lon) / radius_deg_lon) ** 2
+                )
 
-                # Poprawny warunek zasięgu (stopnie vs. stopnie)
-                if distance_degrees <= radius_degrees:
-                    # Funkcja jądra (prosty kernel: stała wartość w promieniu)
-                    heatmap[i, j] += abs(point['trust_scaled']) * 5
+                # Jeśli w zasięgu, dodaj wpływ
+                if distance_degrees <= 1.0:  # Znormalizowana odległość
+                    # Funkcja jądra Gaussa z lepszym wypełnieniem centrum
+                    # Zmniejszamy wykładnik, żeby centrum było bardziej wypełnione
+                    influence = math.exp(-distance_degrees ** 2 / 0.3)  # Było 0.5
+                    heatmap[i, j] += abs(point['trust_scaled']) * influence * 3  # Zwiększony mnożnik
 
     grid_info = {
         'resolution': resolution,
-        'radius_degrees': radius_degrees,  # Nowa jednostka zasięgu
+        'radius_meters': radius_meters,
+        'radius_degrees': radius_degrees,
         'lat_step': lat_step,
         'lon_step': lon_step,
         'num_points': len(points),
@@ -101,24 +168,21 @@ def create_heatmap(resolution=100, radius_degrees=0.01, normalize=True):
         'delta_i': delta_i,
         'delta_j': delta_j
     }
-    bounds['min_lat'], bounds['min_lon'] = convert_point(min_lat, min_lon)
-    bounds['max_lat'], bounds['max_lon'] = convert_point(max_lat, max_lon)
 
     return heatmap, bounds, grid_info
 
 
-
 def print_heatmap_stats(heatmap, bounds, grid_info):
-    """Print statistics about the generated heatmap."""
+    """Wyświetla statystyki wygenerowanej heatmapy."""
     if heatmap is None:
         print("No heatmap data available.")
         return
 
     print("=" * 50)
-    print("HEATMAP STATISTICS (Euklidesowa Metryka)")
+    print("HEATMAP STATISTICS")
     print("=" * 50)
     print(f"Grid resolution: {grid_info['resolution']}x{grid_info['resolution']}")
-    print(f"Radius (Degrees): {grid_info['radius_degrees']:.6f}") 
+    print(f"Radius: {grid_info['radius_meters']} meters ({grid_info['radius_degrees']:.6f}°)")
     print(f"Number of points: {grid_info['num_points']}")
     print(f"Normalized: {grid_info['normalized']}")
     print(f"Optimization range (cells): +/- {grid_info['delta_i']} (lat), +/- {grid_info['delta_j']} (lon)")
@@ -135,6 +199,7 @@ def print_heatmap_stats(heatmap, bounds, grid_info):
 
 def plot_heatmap(heatmap, bounds, grid_info, title="Trust Heatmap",
                  cmap='hot', figsize=(12, 10), show_points=True, save_path=None):
+    """Wizualizuje heatmapę."""
     if heatmap is None:
         print("No heatmap data available to plot.")
         return
@@ -152,17 +217,24 @@ def plot_heatmap(heatmap, bounds, grid_info, title="Trust Heatmap",
         origin='lower',
         cmap=cmap,
         aspect='auto',
-        interpolation='bilinear'
+        interpolation='bilinear',
+        alpha=0.7
     )
 
     plt.colorbar(im, ax=ax, label='Heat Intensity (Trust Value)')
 
     if show_points:
         data = view_all() 
-        points = [row for row in data if row['coordinates'] and row['trust'] is not None]
+        points = []
+        for row in data:
+            if row['coordinates'] and row['trust'] is not None:
+                x, y = row['coordinates']
+                lat, lon = convert_point(x, y)
+                points.append((lat, lon))
+        
         if points:
-            lats = [p['coordinates'][0] for p in points]
-            lons = [p['coordinates'][1] for p in points]
+            lats = [p[0] for p in points]
+            lons = [p[1] for p in points]
 
             ax.scatter(
                 lons, lats,
@@ -179,22 +251,33 @@ def plot_heatmap(heatmap, bounds, grid_info, title="Trust Heatmap",
 
     ax.set_xlabel('Longitude', fontsize=12)
     ax.set_ylabel('Latitude', fontsize=12)
-    radius_str = f'Radius: {grid_info["radius_degrees"]:.4f}°'
+    
+    radius_str = f'Radius: {grid_info["radius_meters"]}m'
     ax.set_title(
-        f'{title} (Uproszczona Metryka)\n({radius_str}, Points: {grid_info["num_points"]}, Resolution: {grid_info["resolution"]}x{grid_info["resolution"]})',
+        f'{title}\n({radius_str}, Points: {grid_info["num_points"]}, Resolution: {grid_info["resolution"]}x{grid_info["resolution"]})',
         fontsize=14,
         pad=20
     )
 
     ax.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
-
     plt.tight_layout()
     
     if save_path:
-        plt.savefig(save_path)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Heatmap saved to: {save_path}")
     
     plt.show()
 
+
 if __name__ == '__main__':
-    heatmap, bounds, grid_info = create_heatmap(radius_degrees=500.0, resolution=100)
-    plot_heatmap(heatmap, bounds, grid_info)
+    # Przykład użycia z prawidłowym promieniem w metrach
+    heatmap, bounds, grid_info = create_heatmap(
+        radius_meters=500,  # 500 metrów
+        resolution=200
+    )
+    
+    if heatmap is not None:
+        print_heatmap_stats(heatmap, bounds, grid_info)
+        plot_heatmap(heatmap, bounds, grid_info, save_path='heatmap.png')
+    else:
+        print("Failed to generate heatmap. Check if database has valid data.")

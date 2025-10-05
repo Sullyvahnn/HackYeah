@@ -32,13 +32,14 @@ def connect_db():
     """)
 
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS Alerts (
+        CREATE TABLE IF NOT EXISTS scrapped_data (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT NOT NULL,          -- ISO date string (YYYY-MM-DD)
             label TEXT NOT NULL,
+            address TEXT,
+            city TEXT,
             coordinates TEXT,            -- JSON array of two floats
-            trust INTEGER,
-            user TEXT
+            trust INTEGER
         )
     """)
 
@@ -51,11 +52,22 @@ def connect_db():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS Coordinate (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL,
+            x REAL NOT NULL,
+            y REAL NOT NULL,
+            email TEXT NOT NULL,
+            FOREIGN KEY(email) REFERENCES User(email)
+        )
+    """)
+
     conn.commit()
     return conn
 
 
-def add_row(date=None, label=None, coordinates=None, trust=None, user=None):
+def add_row(date=None, label=None, address=None, city=None, coordinates=None, trust=None):
     """Adds a new row to scrapped_data."""
     if date is None:
         date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -70,9 +82,9 @@ def add_row(date=None, label=None, coordinates=None, trust=None, user=None):
     conn = connect_db()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO Alerts (date, label, coordinates, trust, user)
-        VALUES (?, ?, ?, ?, ?)
-    """, (date, label, coord_json, trust, user))
+        INSERT INTO scrapped_data (date, label, address, city, coordinates, trust)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (date, label, address, city, coord_json, trust))
     conn.commit()
     conn.close()
     print("Row added successfully.")
@@ -82,7 +94,7 @@ def delete_row(row_id: int):
     """Deletes a row from scrapped_data by ID."""
     conn = connect_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM Alerts WHERE id = ?", (row_id,))
+    cursor.execute("DELETE FROM scrapped_data WHERE id = ?", (row_id,))
     conn.commit()
     conn.close()
     print(f"🗑 Row with ID {row_id} deleted (if it existed).")
@@ -92,7 +104,7 @@ def view_all():
     """Returns all rows in scrapped_data."""
     conn = connect_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Alerts")
+    cursor.execute("SELECT * FROM scrapped_data")
     rows = cursor.fetchall()
     conn.close()
 
@@ -102,6 +114,8 @@ def view_all():
             "id": row["id"],
             "date": row["date"],
             "label": row["label"],
+            "address": row["address"],
+            "city": row["city"],
             "coordinates": json.loads(row["coordinates"]) if row["coordinates"] else None,
             "trust": row["trust"],
         }
@@ -116,7 +130,7 @@ def row_exists(date, label=None, coordinates=None):
     coord_json = json.dumps(coordinates) if coordinates else None
 
     cursor.execute("""
-        SELECT 1 FROM Alerts
+        SELECT 1 FROM scrapped_data
         WHERE date = ? AND label = ? AND coordinates = ?
         LIMIT 1
     """, (date, label, coord_json))
@@ -169,12 +183,11 @@ def get_all_alerts():
     """Get all user alerts."""
     conn = connect_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Alerts WHERE User IS NOT NULL;"
-                   )
+    cursor.execute("SELECT * FROM Coordinate ORDER BY date DESC")
     rows = cursor.fetchall()
     conn.close()
 
-    return [{"id": row["id"], "date": row["date"], "x": row["coordinates"][0], "y": row["coordinates"][1], "email": row["email"]} for row in rows]
+    return [{"id": row["id"], "date": row["date"], "x": row["x"], "y": row["y"], "email": row["email"]} for row in rows]
 
 
 # --- Users ---

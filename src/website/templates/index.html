@@ -31,7 +31,31 @@
 
   <!-- Hamburger button -->
   <button class="menu-btn" onclick="toggleMenu()">☰</button>
-
+  <!-- Dodaj w odpowiednim miejscu na stronie -->
+<div id="searchBox" style="position: fixed; top: 70px; left: 50%; transform: translateX(-50%); z-index: 1000; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+    <input 
+        type="text" 
+        id="addressSearch" 
+        placeholder="Szukaj adresu..."
+        style="width: 300px; padding: 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px;"
+    />
+    <button onclick="searchAddress()" style="padding: 8px 15px; margin-left: 5px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        🔍 Szukaj
+    </button>
+    <div id="searchResults" style="margin-top: 10px; max-height: 200px; overflow-y: auto;"></div>
+</div><!-- Dodaj w odpowiednim miejscu na stronie -->
+<div id="searchBox" style="position: fixed; top: 70px; left: 50%; transform: translateX(-50%); z-index: 1000; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+    <input 
+        type="text" 
+        id="addressSearch" 
+        placeholder="Szukaj adresu w Warszawie..."
+        style="width: 300px; padding: 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px;"
+    />
+    <button onclick="searchAddress()" style="padding: 8px 15px; margin-left: 5px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        🔍 Szukaj
+    </button>
+    <div id="searchResults" style="margin-top: 10px; max-height: 200px; overflow-y: auto;"></div>
+</div>
   <!-- Side menu -->
   <div class="side-menu" id="menu">
     <h2>Menu ThreatLens</h2>
