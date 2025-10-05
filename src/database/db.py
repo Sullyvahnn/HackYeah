@@ -122,6 +122,24 @@ def view_all():
         result.append(row_dict)
     return result
 
+def view_all_alerts():
+    """Returns all rows in scrapped_data."""
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM Coordinate")
+    rows = cursor.fetchall()
+    conn.close()
+    result = []
+    for row in rows:
+        row_dict = {
+            "id": row["id"],
+            "date": row["date"],
+            "x": row["x"],
+            "y": row["y"],
+        }
+        result.append(row_dict)
+    return result
+
 
 def row_exists(date, label=None, coordinates=None):
     """Check if a row with the same date, label, and coordinates exists."""

@@ -86,7 +86,7 @@ def create_heatmap(resolution=100, radius_degrees=0.01, normalize=True):
                 # Poprawny warunek zasięgu (stopnie vs. stopnie)
                 if distance_degrees <= radius_degrees:
                     # Funkcja jądra (prosty kernel: stała wartość w promieniu)
-                    heatmap[i, j] += abs(point['trust_scaled']) * 10
+                    heatmap[i, j] += abs(point['trust_scaled']) * 5
 
     grid_info = {
         'resolution': resolution,
