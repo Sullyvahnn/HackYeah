@@ -1,56 +1,118 @@
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Tło */
 body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: #f2f2f2;
-    }
-    .login-box {
-      width: 90%;
-      max-width: 400px;
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      text-align: center;
-    }
-    h1 {
-      font-size: 22px;
-      margin-bottom: 20px;
-    }
-    input[type="email"] {
-      width: 100%;
-      padding: 14px;
-      font-size: 18px;
-      margin-bottom: 15px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      box-sizing: border-box;
-    }
-    button {
-      width: 100%;
-      padding: 14px;
-      font-size: 18px;
-      background: #e63946;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #d62828;
-    }
-    .back {
-      display: block;
-      margin-top: 15px;
-      font-size: 16px;
-      text-decoration: none;
-      color: #333;
-    }
-    .flash-messages {
-      color: #d62828;
-      margin-bottom: 15px;
-    }
+  font-family: "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(135deg, #065f46, #15803d);
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+
+/* Pudełko logowania */
+.login-container {
+  width: 100%;
+  max-width: 380px;
+  padding: 20px;
+}
+
+.login-box {
+  background: #ffffff10;
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  padding: 30px;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+.login-box h1 {
+  margin-bottom: 20px;
+  font-size: 1.8rem;
+  color: #f8fafc;
+}
+
+/* Flash messages */
+.flash-messages {
+  background: #dc2626;
+  color: #fff;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  font-size: 0.9rem;
+}
+
+/* Formularz */
+.form-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.input-field {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #0e984b;
+  background: #188043;
+  color: #f1f5f9;
+  font-size: 1rem;
+  margin-top: 6px;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #22c55e;
+  box-shadow: 0 0 6px #22c55e;
+}
+
+/* Błędy */
+.error {
+  color: #f87171;
+  font-size: 0.85rem;
+  display: block;
+  margin-top: 4px;
+}
+
+/* Przycisk */
+.btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #22c55e;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn:hover {
+  background: #2563eb;
+}
+
+/* Link powrotny */
+.back-link {
+  display: inline-block;
+  margin-top: 15px;
+  font-size: 0.9rem;
+  color: #cbd5e1;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.back-link:hover {
+  color: #fff;
+}
+
+.input-field::placeholder {
+  color: #b3b8b5;
+  opacity: 0.9;
+}
